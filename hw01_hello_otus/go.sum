@@ -4,8 +4,6 @@ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8U
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/example v0.0.0-20210811190340-787a929d5a0d h1:VYLNvPLNayyBk9XOnsTk5jh7vZarEfiJe7/S15vri2g=
 golang.org/x/example v0.0.0-20210811190340-787a929d5a0d/go.mod h1:+yakPl5KR9J+ysfUNADYwEU5qeqjUO473wDktD4xMYw=
-golang.org/x/example v0.0.0-20220412213650-2e68773dfca0 h1:ygD+9PaH9IfzZUF131IxmiXGkxzuN/pphDjzh2LY8N8=
-golang.org/x/example v0.0.0-20220412213650-2e68773dfca0/go.mod h1:+yakPl5KR9J+ysfUNADYwEU5qeqjUO473wDktD4xMYw=
 golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
