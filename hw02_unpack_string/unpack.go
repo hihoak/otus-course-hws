@@ -41,6 +41,7 @@ func defineRuneType(r rune) runeType {
 	return RUNE
 }
 
+//nolint:ifshort
 func Unpack(input string) (string, error) {
 	res := strings.Builder{}
 	previousChar := ""
