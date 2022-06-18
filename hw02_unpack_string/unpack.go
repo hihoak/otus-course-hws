@@ -42,16 +42,11 @@ func defineRuneType(r rune) runeType {
 }
 
 func Unpack(input string) (string, error) {
-	runeInput := []rune(input)
-	if len(runeInput) == 0 {
-		return "", nil
-	}
-
-	res := ""
+	res := strings.Builder{}
 	previousChar := ""
 	previousType := EMPTY
 	currentType := EMPTY
-	for _, r := range runeInput {
+	for _, r := range input {
 		currentType = defineRuneType(r)
 		switch previousType {
 		case EMPTY:
@@ -69,12 +64,15 @@ func Unpack(input string) (string, error) {
 			}
 		case RUNE:
 			if currentType == DIGIT {
-				times, _ := strconv.Atoi(string(r))
-				res += strings.Repeat(previousChar, times)
+				times, err := strconv.Atoi(string(r))
+				if err != nil {
+					return "", ErrInvalidString
+				}
+				res.WriteString(strings.Repeat(previousChar, times))
 				previousType = EMPTY
 			}
 			if currentType == SLASH || currentType == RUNE {
-				res += previousChar
+				res.WriteString(previousChar)
 				previousType = currentType
 				previousChar = string(r)
 			}
@@ -90,7 +88,7 @@ func Unpack(input string) (string, error) {
 	}
 
 	if previousType == RUNE {
-		res += previousChar
+		res.WriteString(previousChar)
 	}
-	return res, nil
+	return res.String(), nil
 }
