@@ -34,10 +34,9 @@ func Top10(input string) []string {
 		}
 
 		if _, ok := wordNumberOccurrences[word]; !ok {
-			wordNumberOccurrences[word] = 1
-		} else {
-			wordNumberOccurrences[word]++
+			wordNumberOccurrences[word] = 0
 		}
+		wordNumberOccurrences[word]++
 	}
 
 	// merge all words with the same occurrences to slice and form hashMap
