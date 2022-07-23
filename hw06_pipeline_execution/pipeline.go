@@ -14,20 +14,15 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	data := func() In {
 		dataChan := make(Bi)
 		go func() {
-			defer close(dataChan)
+			defer func() {
+				close(dataChan)
+			}()
 			for value := range in {
 				select {
 				case <-done:
-					// gracefully closing channel
-					continue
-				default:
-					select {
-					case <-done:
-						// gracefully closing channel
-						continue
-					default:
-						dataChan <- value
-					}
+					fmt.Printf("Close channel because of stop signal...")
+					return
+				case dataChan <- value:
 				}
 			}
 		}()

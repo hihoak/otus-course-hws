@@ -29,21 +29,20 @@ func generateStages(wg *sync.WaitGroup, done <-chan interface{}) []Stage {
 				for {
 					select {
 					case <-done:
-						// gracefully closing channel
-						continue
+						fmt.Printf("Stage '%s' ended because of stop signal...", name)
+						return
 					case v, ok := <-in:
 						if !ok {
 							fmt.Printf("Stage '%s' ended because of closed channel...\n", name)
 							return
 						}
+						time.Sleep(sleepPerStage)
 						select {
 						case <-done:
-							// gracefully closing channel
-							continue
-						default:
+							fmt.Printf("Stage '%s' ended because of stop signal...", name)
+							return
+						case out <- f(v):
 						}
-						time.Sleep(sleepPerStage)
-						out <- f(v)
 					}
 				}
 			}()
@@ -59,7 +58,7 @@ func generateStages(wg *sync.WaitGroup, done <-chan interface{}) []Stage {
 	}
 }
 
-func dataProducer(wg *sync.WaitGroup, data []interface{}) <-chan interface{} {
+func dataProducer(wg *sync.WaitGroup, done <-chan interface{}, data []interface{}) <-chan interface{} {
 	chanData := make(Bi)
 	wg.Add(1)
 	go func() {
@@ -68,7 +67,11 @@ func dataProducer(wg *sync.WaitGroup, data []interface{}) <-chan interface{} {
 			wg.Done()
 		}()
 		for _, v := range data {
-			chanData <- v
+			select {
+			case <-done:
+				return
+			case chanData <- v:
+			}
 		}
 	}()
 	return chanData
@@ -82,7 +85,7 @@ func TestPipeline(t *testing.T) {
 
 		wgProducer := &sync.WaitGroup{}
 		data := []interface{}{1, 2, 3, 4, 5}
-		in := dataProducer(wgProducer, data)
+		in := dataProducer(wgProducer, nil, data)
 
 		result := make([]string, 0, 10)
 		start := time.Now()
@@ -115,7 +118,7 @@ func TestPipeline(t *testing.T) {
 
 		wgProducer := &sync.WaitGroup{}
 		data := []interface{}{1, 2, 3, 4, 5}
-		in := dataProducer(wgProducer, data)
+		in := dataProducer(wgProducer, done, data)
 
 		result := make([]string, 0, 10)
 		start := time.Now()
@@ -125,7 +128,7 @@ func TestPipeline(t *testing.T) {
 		elapsed := time.Since(start)
 
 		require.Len(t, result, 0)
-		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault*2)) // пришлось здесь увеличить из-за флапающего теста
+		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault))
 		wgStages.Wait()
 		wgProducer.Wait()
 	})
@@ -145,7 +148,7 @@ func TestPipeline(t *testing.T) {
 
 		wgProducer := &sync.WaitGroup{}
 		data := []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		in := dataProducer(wgProducer, data)
+		in := dataProducer(wgProducer, done, data)
 
 		result := make([]string, 0)
 		start := time.Now()
@@ -167,7 +170,7 @@ func TestPipeline(t *testing.T) {
 
 		wgProducer := &sync.WaitGroup{}
 		var data []interface{}
-		in := dataProducer(wgProducer, data)
+		in := dataProducer(wgProducer, nil, data)
 
 		result := make([]string, 0)
 		start := time.Now()
