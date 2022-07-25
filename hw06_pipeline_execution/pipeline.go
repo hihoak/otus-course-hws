@@ -15,14 +15,25 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 		dataChan := make(Bi)
 		go func() {
 			defer func() {
+				fmt.Println("Closing data channel...")
 				close(dataChan)
 			}()
-			for value := range in {
+			for {
 				select {
 				case <-done:
-					fmt.Printf("Close channel because of stop signal...")
+					fmt.Println("Got stop signal")
 					return
-				case dataChan <- value:
+				case value, ok := <-in:
+					if !ok {
+						fmt.Println("In channel is closed")
+						return
+					}
+					select {
+					case <-done:
+						fmt.Println("Got stop signal")
+						return
+					case dataChan <- value:
+					}
 				}
 			}
 		}()
