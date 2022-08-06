@@ -3,7 +3,7 @@ package progressbar
 import (
 	"fmt"
 	"os"
-	"strings"
+	"time"
 )
 
 const (
@@ -49,7 +49,9 @@ func (p ProggressBar) Print(currentValue int64) {
 	}
 
 	strPercentage := fmt.Sprintf("%d%%", int(completed*100))
-	strDone := strings.Repeat(doneChar, int(countDoneChars-1))
-	strToBeDone := strings.Repeat(tobeDoneChar, int(lengthOfProgressbar-countDoneChars))
-	fmt.Printf("\r [%s%s%s] %s", strDone, arrowChar, strToBeDone, strPercentage)
+	//strDone := strings.Repeat(doneChar, int(countDoneChars-1))
+	//strToBeDone := strings.Repeat(tobeDoneChar, int(lengthOfProgressbar-countDoneChars))
+	//fmt.Printf("\r [%s%s%s] %s", strDone, arrowChar, strToBeDone, strPercentage)
+	fmt.Printf("\r%s", strPercentage)
+	time.Sleep(time.Millisecond * 100)
 }
