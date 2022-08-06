@@ -11,7 +11,7 @@ const (
 	arrowChar    = ">"
 	tobeDoneChar = " "
 
-	lengthOfProgressbar = 100
+	lengthOfProgressbar = 20
 )
 
 type ProggressBar struct {
@@ -48,8 +48,8 @@ func (p ProggressBar) Print(currentValue int64) {
 		countDoneChars = 1
 	}
 
-	strPercentage := fmt.Sprintf(" %d%%", int(completed*100))
-	str := "[" + strings.Repeat(doneChar, countDoneChars-1) + arrowChar +
-		strings.Repeat(tobeDoneChar, lengthOfProgressbar-countDoneChars) + "]" + strPercentage
-	fmt.Printf("\r %s", str)
+	strPercentage := fmt.Sprintf("%d%%", int(completed*100))
+	strDone := strings.Repeat(doneChar, countDoneChars-1) + arrowChar
+	strToBeDone := strings.Repeat(tobeDoneChar, lengthOfProgressbar-countDoneChars)
+	fmt.Printf("\r [%s%s] %s", strDone, strToBeDone, strPercentage)
 }
