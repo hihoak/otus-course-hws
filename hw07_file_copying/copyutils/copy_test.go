@@ -132,7 +132,7 @@ func TestCopy(t *testing.T) {
 			os.Stdout = stdout
 			require.NoError(t, err)
 
-			resData := make([]byte, testBufSize)
+			resData := make([]byte, testBufSize, testBufSize*2)
 			bytesRead := readFromTestFile(t, testTargetFile, &resData)
 
 			require.Equal(t, len(cs.expectedData), bytesRead)
