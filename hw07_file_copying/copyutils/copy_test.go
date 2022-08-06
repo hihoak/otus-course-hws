@@ -1,6 +1,7 @@
 package copyutils
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"os"
@@ -42,13 +43,14 @@ func fillTestFileWithData(t *testing.T, file *os.File, data string) {
 	}
 }
 
-func readFromTestFile(t *testing.T, file *os.File, data *[]byte) int {
+func readFromTestFile(t *testing.T, file *os.File) string {
 	t.Helper()
-	n, err := file.Read(*data)
+	reader := bufio.NewReader(file)
+	data, err := reader.ReadBytes('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatalf("can't read from test file: %v", err)
 	}
-	return n
+	return string(data)
 }
 
 func turnOffStdout(t *testing.T) *os.File {
@@ -71,10 +73,9 @@ func TestCopy(t *testing.T) {
 
 		require.NoError(t, err)
 
-		resData := make([]byte, testBufSize)
-		readFromTestFile(t, testTargetFile, &resData)
+		resData := readFromTestFile(t, testTargetFile)
 
-		expectedData := make([]byte, testBufSize)
+		expectedData := ""
 		require.Equal(t, expectedData, resData)
 	})
 
@@ -132,11 +133,9 @@ func TestCopy(t *testing.T) {
 			os.Stdout = stdout
 			require.NoError(t, err)
 
-			resData := make([]byte, testBufSize)
-			bytesRead := readFromTestFile(t, testTargetFile, &resData)
+			resData := readFromTestFile(t, testTargetFile)
 
-			require.Equal(t, len(cs.expectedData), bytesRead)
-			require.Equal(t, cs.expectedData, string(resData[:bytesRead]))
+			require.Equal(t, cs.expectedData, resData)
 		}
 	})
 }
