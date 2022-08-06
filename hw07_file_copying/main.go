@@ -2,6 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
+
+	copyUtils "github.com/fixme_my_friend/hw07_file_copying/copyutils"
 )
 
 var (
@@ -18,5 +22,9 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Place your code here.
+	err := copyUtils.Copy(from, to, offset, limit)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
