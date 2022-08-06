@@ -42,7 +42,13 @@ func (p ProggressBar) Print(currentValue int64) {
 	if currentValue > p.Max {
 		currentValue = p.Max
 	}
-	completed := float32(currentValue) / float32(p.Max)
+	floatPMax := float64(p.Max)
+	fmt.Println(p.Max)
+	fmt.Println(floatPMax)
+	floatCurrentValue := float64(currentValue)
+	fmt.Println(currentValue)
+	fmt.Println(floatCurrentValue)
+	completed := floatCurrentValue / floatPMax
 	fmt.Println("completed: ", completed)
 	countDoneChars := int(lengthOfProgressbar * completed)
 	if countDoneChars == 0 {
