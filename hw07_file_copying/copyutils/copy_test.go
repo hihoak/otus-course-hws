@@ -66,9 +66,9 @@ func TestCopy(t *testing.T) {
 		testSourceFile, testTargetFile := createTestFiles(t)
 		defer removeTestFiles(t, testTargetFile, testSourceFile)
 
-		stdout := turnOffStdout(t)
+		// stdout := turnOffStdout(t)
 		err := Copy(testSourceFile.Name(), testSourceFile.Name(), 0, 0)
-		os.Stdout = stdout
+		// os.Stdout = stdout
 
 		require.NoError(t, err)
 
