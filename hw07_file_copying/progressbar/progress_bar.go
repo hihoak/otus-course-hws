@@ -49,7 +49,7 @@ func (p ProggressBar) Print(currentValue int64) {
 	}
 
 	strPercentage := fmt.Sprintf("%d%%", int(completed*100))
-	strDone := strings.Repeat(doneChar, countDoneChars-1) + arrowChar
+	strDone := strings.Repeat(doneChar, countDoneChars-1)
 	strToBeDone := strings.Repeat(tobeDoneChar, lengthOfProgressbar-countDoneChars)
-	fmt.Printf("\r [%s%s] %s", strDone, strToBeDone, strPercentage)
+	fmt.Printf("\r [%s%s%s] %s", strDone, arrowChar, strToBeDone, strPercentage)
 }
