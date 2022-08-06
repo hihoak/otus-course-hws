@@ -11,7 +11,7 @@ const (
 	arrowChar    = ">"
 	tobeDoneChar = " "
 
-	lengthOfProgressbar = 20
+	lengthOfProgressbar = 5
 )
 
 type ProggressBar struct {
