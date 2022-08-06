@@ -12,7 +12,6 @@ import (
 
 const (
 	testFilesDirectory = "../testdata"
-	testBufSize        = 20
 )
 
 func createTestFiles(t *testing.T) (*os.File, *os.File) {
@@ -125,7 +124,7 @@ func TestCopy(t *testing.T) {
 
 		for _, cs := range cases {
 			testSourceFile, testTargetFile := createTestFiles(t)
-			defer removeTestFiles(t, testTargetFile, testSourceFile)
+
 			fillTestFileWithData(t, testSourceFile, cs.inputData)
 
 			stdout := turnOffStdout(t)
@@ -134,6 +133,7 @@ func TestCopy(t *testing.T) {
 			require.NoError(t, err)
 
 			resData := readFromTestFile(t, testTargetFile)
+			removeTestFiles(t, testTargetFile, testSourceFile)
 
 			require.Equal(t, cs.expectedData, resData)
 		}
