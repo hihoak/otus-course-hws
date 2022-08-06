@@ -39,9 +39,9 @@ func fillTestFileWithData(t *testing.T, file *os.File, data string) {
 	}
 }
 
-func readFromTestFile(t *testing.T, file *os.File, data []byte) int {
+func readFromTestFile(t *testing.T, file *os.File, data *[]byte) int {
 	t.Helper()
-	n, err := file.Read(data)
+	n, err := file.Read(*data)
 	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatalf("can't read from test file: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestCopy(t *testing.T) {
 		require.NoError(t, err)
 
 		resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
-		readFromTestFile(t, testTargetFile, resData)
+		readFromTestFile(t, testTargetFile, &resData)
 
 		expectedData := make([]byte, chunkBytesSize, chunkBytesSize*2)
 		require.Equal(t, expectedData, resData)
@@ -130,7 +130,7 @@ func TestCopy(t *testing.T) {
 			require.NoError(t, err)
 
 			resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
-			bytesRead := readFromTestFile(t, testTargetFile, resData)
+			bytesRead := readFromTestFile(t, testTargetFile, &resData)
 
 			require.Equal(t, len(cs.expectedData), bytesRead)
 			require.Equal(t, cs.expectedData, string(resData[:bytesRead]))
