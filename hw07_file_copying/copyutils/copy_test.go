@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testFilesDirectory = "../testdata"
+const (
+	testFilesDirectory = "../testdata"
+	testBufSize        = 20
+)
 
 func createTestFiles(t *testing.T) (*os.File, *os.File) {
 	t.Helper()
@@ -68,10 +71,10 @@ func TestCopy(t *testing.T) {
 
 		require.NoError(t, err)
 
-		resData := make([]byte, 20)
+		resData := make([]byte, testBufSize)
 		readFromTestFile(t, testTargetFile, &resData)
 
-		expectedData := make([]byte, 20)
+		expectedData := make([]byte, testBufSize)
 		require.Equal(t, expectedData, resData)
 	})
 
@@ -129,7 +132,7 @@ func TestCopy(t *testing.T) {
 			os.Stdout = stdout
 			require.NoError(t, err)
 
-			resData := make([]byte, 20)
+			resData := make([]byte, testBufSize)
 			bytesRead := readFromTestFile(t, testTargetFile, &resData)
 
 			require.Equal(t, len(cs.expectedData), bytesRead)
