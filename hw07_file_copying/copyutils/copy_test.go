@@ -12,6 +12,7 @@ import (
 const testFilesDirectory = "../testdata"
 
 func createTestFiles(t *testing.T) (*os.File, *os.File) {
+	t.Helper()
 	testSourceFile, err := os.CreateTemp(testFilesDirectory, "test-*.txt")
 	if err != nil {
 		t.Fatalf("can't init test source file: %v", err)
@@ -25,18 +26,21 @@ func createTestFiles(t *testing.T) (*os.File, *os.File) {
 }
 
 func removeTestFiles(t *testing.T, files ...*os.File) {
+	t.Helper()
 	for _, file := range files {
 		require.NoError(t, os.Remove(file.Name()))
 	}
 }
 
 func fillTestFileWithData(t *testing.T, file *os.File, data string) {
+	t.Helper()
 	if _, err := file.Write([]byte(data)); err != nil {
 		t.Fatalf("can't fill test file with data: %v", err)
 	}
 }
 
 func readFromTestFile(t *testing.T, file *os.File, data []byte) int {
+	t.Helper()
 	n, err := file.Read(data)
 	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatalf("can't read from test file: %v", err)
@@ -45,6 +49,7 @@ func readFromTestFile(t *testing.T, file *os.File, data []byte) int {
 }
 
 func turnOffStdout(t *testing.T) *os.File {
+	t.Helper()
 	null, err := os.Open(os.DevNull)
 	oldStdout := os.Stdout
 	require.NoError(t, err)
@@ -63,10 +68,10 @@ func TestCopy(t *testing.T) {
 
 		require.NoError(t, err)
 
-		resData := make([]byte, chunkBytesSize)
+		resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
 		readFromTestFile(t, testTargetFile, resData)
 
-		expectedData := make([]byte, chunkBytesSize)
+		expectedData := make([]byte, chunkBytesSize, chunkBytesSize*2)
 		require.Equal(t, expectedData, resData)
 	})
 
@@ -124,7 +129,7 @@ func TestCopy(t *testing.T) {
 			os.Stdout = stdout
 			require.NoError(t, err)
 
-			resData := make([]byte, chunkBytesSize)
+			resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
 			bytesRead := readFromTestFile(t, testTargetFile, resData)
 
 			require.Equal(t, len(cs.expectedData), bytesRead)
