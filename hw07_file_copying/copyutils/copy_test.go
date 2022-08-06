@@ -45,11 +45,11 @@ func fillTestFileWithData(t *testing.T, file *os.File, data string) {
 func readFromTestFile(t *testing.T, file *os.File) string {
 	t.Helper()
 	reader := bufio.NewReader(file)
-	data, err := reader.ReadBytes('\n')
+	data, err := reader.ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatalf("can't read from test file: %v", err)
 	}
-	return string(data)
+	return data
 }
 
 func turnOffStdout(t *testing.T) *os.File {
@@ -78,63 +78,63 @@ func TestCopy(t *testing.T) {
 		require.Equal(t, expectedData, resData)
 	})
 
-	//t.Run("copy an empty file. Offset: -10, Limit: 0", func(t *testing.T) {
-	//	testSourceFile, testTargetFile := createTestFiles(t)
-	//	defer removeTestFiles(t, testTargetFile, testSourceFile)
-	//
-	//	stdout := turnOffStdout(t)
-	//	err := Copy(testSourceFile.Name(), testSourceFile.Name(), -10, 0)
-	//	os.Stdout = stdout
-	//	require.ErrorIs(t, err, ErrOffsetIsNegative)
-	//})
-	//
-	//t.Run("copy an empty file. Offset: 0, Limit: -10", func(t *testing.T) {
-	//	testSourceFile, testTargetFile := createTestFiles(t)
-	//	defer removeTestFiles(t, testTargetFile, testSourceFile)
-	//
-	//	stdout := turnOffStdout(t)
-	//	err := Copy(testSourceFile.Name(), testSourceFile.Name(), 0, -10)
-	//	os.Stdout = stdout
-	//	require.ErrorIs(t, err, ErrLimitIsNegative)
-	//})
-	//
-	//t.Run("copy an empty file set offset greater than size of source file. Offset: 100, Limit: 0", func(t *testing.T) {
-	//	testSourceFile, testTargetFile := createTestFiles(t)
-	//	defer removeTestFiles(t, testTargetFile, testSourceFile)
-	//
-	//	stdout := turnOffStdout(t)
-	//	err := Copy(testSourceFile.Name(), testSourceFile.Name(), 100, 0)
-	//	os.Stdout = stdout
-	//	require.ErrorIs(t, err, ErrOffsetExceedsFileSize)
-	//})
-	//
-	//t.Run("copy file with data. Offset: 0, Limit: 0", func(t *testing.T) {
-	//	cases := []struct {
-	//		inputData    string
-	//		offset       int64
-	//		limit        int64
-	//		expectedData string
-	//	}{
-	//		{"hello, world!", 0, 0, "hello, world!"},
-	//		{"hello, OTUS!", 0, 5, "hello"},
-	//		{"hello, OTUS!", 7, 5, "OTUS!"},
-	//		{"hello, OTUS!", 7, 10, "OTUS!"},
-	//	}
-	//
-	//	for _, cs := range cases {
-	//		testSourceFile, testTargetFile := createTestFiles(t)
-	//
-	//		fillTestFileWithData(t, testSourceFile, cs.inputData)
-	//
-	//		stdout := turnOffStdout(t)
-	//		err := Copy(testSourceFile.Name(), testTargetFile.Name(), cs.offset, cs.limit)
-	//		os.Stdout = stdout
-	//		require.NoError(t, err)
-	//
-	//		resData := readFromTestFile(t, testTargetFile)
-	//		removeTestFiles(t, testTargetFile, testSourceFile)
-	//
-	//		require.Equal(t, cs.expectedData, resData)
-	//	}
-	//})
+	t.Run("copy an empty file. Offset: -10, Limit: 0", func(t *testing.T) {
+		testSourceFile, testTargetFile := createTestFiles(t)
+		defer removeTestFiles(t, testTargetFile, testSourceFile)
+
+		stdout := turnOffStdout(t)
+		err := Copy(testSourceFile.Name(), testSourceFile.Name(), -10, 0)
+		os.Stdout = stdout
+		require.ErrorIs(t, err, ErrOffsetIsNegative)
+	})
+
+	t.Run("copy an empty file. Offset: 0, Limit: -10", func(t *testing.T) {
+		testSourceFile, testTargetFile := createTestFiles(t)
+		defer removeTestFiles(t, testTargetFile, testSourceFile)
+
+		stdout := turnOffStdout(t)
+		err := Copy(testSourceFile.Name(), testSourceFile.Name(), 0, -10)
+		os.Stdout = stdout
+		require.ErrorIs(t, err, ErrLimitIsNegative)
+	})
+
+	t.Run("copy an empty file set offset greater than size of source file. Offset: 100, Limit: 0", func(t *testing.T) {
+		testSourceFile, testTargetFile := createTestFiles(t)
+		defer removeTestFiles(t, testTargetFile, testSourceFile)
+
+		stdout := turnOffStdout(t)
+		err := Copy(testSourceFile.Name(), testSourceFile.Name(), 100, 0)
+		os.Stdout = stdout
+		require.ErrorIs(t, err, ErrOffsetExceedsFileSize)
+	})
+
+	t.Run("copy file with data. Offset: 0, Limit: 0", func(t *testing.T) {
+		cases := []struct {
+			inputData    string
+			offset       int64
+			limit        int64
+			expectedData string
+		}{
+			{"hello, world!", 0, 0, "hello, world!"},
+			{"hello, OTUS!", 0, 5, "hello"},
+			{"hello, OTUS!", 7, 5, "OTUS!"},
+			{"hello, OTUS!", 7, 10, "OTUS!"},
+		}
+
+		for _, cs := range cases {
+			testSourceFile, testTargetFile := createTestFiles(t)
+
+			fillTestFileWithData(t, testSourceFile, cs.inputData)
+
+			stdout := turnOffStdout(t)
+			err := Copy(testSourceFile.Name(), testTargetFile.Name(), cs.offset, cs.limit)
+			os.Stdout = stdout
+			require.NoError(t, err)
+
+			resData := readFromTestFile(t, testTargetFile)
+			removeTestFiles(t, testTargetFile, testSourceFile)
+
+			require.Equal(t, cs.expectedData, resData)
+		}
+	})
 }
