@@ -68,10 +68,10 @@ func TestCopy(t *testing.T) {
 
 		require.NoError(t, err)
 
-		resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
+		resData := make([]byte, 20)
 		readFromTestFile(t, testTargetFile, &resData)
 
-		expectedData := make([]byte, chunkBytesSize, chunkBytesSize*2)
+		expectedData := make([]byte, 20)
 		require.Equal(t, expectedData, resData)
 	})
 
@@ -129,7 +129,7 @@ func TestCopy(t *testing.T) {
 			os.Stdout = stdout
 			require.NoError(t, err)
 
-			resData := make([]byte, chunkBytesSize, chunkBytesSize*2)
+			resData := make([]byte, 20)
 			bytesRead := readFromTestFile(t, testTargetFile, &resData)
 
 			require.Equal(t, len(cs.expectedData), bytesRead)
