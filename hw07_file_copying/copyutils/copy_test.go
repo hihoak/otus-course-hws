@@ -11,19 +11,18 @@ import (
 )
 
 const (
-	testFilesDirectory = "../testdata"
+	testFilesDirectoryPattern = "../testdata-*"
+	testFilesPattern          = "test-*.txt"
 )
 
 func createTestFiles(t *testing.T) (*os.File, *os.File) {
 	t.Helper()
-	testSourceFile, err := os.CreateTemp(testFilesDirectory, "test-*.txt")
-	if err != nil {
-		t.Fatalf("can't init test source file: %v", err)
-	}
-	testTargetFile, err := os.CreateTemp(testFilesDirectory, "test-*.txt")
-	if err != nil {
-		t.Fatalf("can't init test target file: %v", err)
-	}
+	testDirPath, err := os.MkdirTemp(".", testFilesDirectoryPattern)
+	require.NoErrorf(t, err, "can't create temp directory")
+	testSourceFile, err := os.CreateTemp(testDirPath, testFilesPattern)
+	require.NoErrorf(t, err, "can't init test source file")
+	testTargetFile, err := os.CreateTemp(testDirPath, testFilesPattern)
+	require.NoErrorf(t, err, "can't init test target file")
 
 	return testSourceFile, testTargetFile
 }

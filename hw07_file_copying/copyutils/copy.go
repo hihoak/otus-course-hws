@@ -1,7 +1,6 @@
 package copyutils
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -21,42 +20,43 @@ var (
 	ErrLimitIsNegative       = errors.New("limit is negative")
 )
 
-func validateParameters(filePath, toPath string, offset, limit int64) error {
+func validateParameters(filePath, toPath string, offset, limit int64) (os.FileInfo, error) {
 	sourceFileInfo, err := os.Stat(filePath)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to get info about source file '%s'", filePath))
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get info about source file '%s'", filePath))
 	}
 
 	if sourceFileInfo.IsDir() {
-		return errors.Wrap(ErrUnsupportedFile, fmt.Sprintf("file '%s' is a directory", filePath))
+		return nil, errors.Wrap(ErrUnsupportedFile, fmt.Sprintf("file '%s' is a directory", filePath))
 	}
 
 	targetFileInfo, err := os.Stat(toPath)
 	if err == nil && targetFileInfo.IsDir() {
-		return errors.Wrap(ErrUnsupportedFile, fmt.Sprintf("file '%s' is a directory", toPath))
+		return nil, errors.Wrap(ErrUnsupportedFile, fmt.Sprintf("file '%s' is a directory", toPath))
 	}
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, fmt.Sprintf("failed to get info about target file '%s'", toPath))
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get info about target file '%s'", toPath))
 	}
 
 	if offset < 0 {
-		return errors.Wrap(ErrOffsetIsNegative, "offset can't be less than 0")
+		return nil, errors.Wrap(ErrOffsetIsNegative, "offset can't be less than 0")
 	}
 
 	if sourceFileInfo.Size() < offset {
-		return errors.Wrap(ErrOffsetExceedsFileSize, fmt.Sprintf("too big offset '%d' for file '%s' with size '%d'",
+		return nil, errors.Wrap(ErrOffsetExceedsFileSize, fmt.Sprintf("too big offset '%d' for file '%s' with size '%d'",
 			offset, filePath, sourceFileInfo.Size()))
 	}
 
 	if limit < 0 {
-		return errors.Wrap(ErrLimitIsNegative, "limit can't be a negative digit")
+		return nil, errors.Wrap(ErrLimitIsNegative, "limit can't be a negative digit")
 	}
 
-	return nil
+	return sourceFileInfo, nil
 }
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-	if err := validateParameters(fromPath, toPath, offset, limit); err != nil {
+	sourceFileInfo, err := validateParameters(fromPath, toPath, offset, limit)
+	if err != nil {
 		return errors.Wrap(err, "validation of parameters failed")
 	}
 
@@ -75,25 +75,20 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 	defer targetFile.Close()
 
-	buffer := bufio.NewReader(sourceFile)
-	readAllfile := false
-	if limit == 0 {
-		readAllfile = true
-	}
-	bar, err := progressbar.NewProgressBar(sourceFile, offset, limit)
+	bar, err := progressbar.NewProgressBar(sourceFileInfo, offset, limit)
 	if err != nil {
 		return errors.Wrap(err, "can't create proggress bar")
 	}
 	bar.Print(0)
 
 	var bytesReaden int64
-	for readAllfile || bytesReaden != limit {
+	for limit == 0 || bytesReaden != limit {
 		bytesToCopy := chunkBytesSize
-		if bytesToCopy > limit-bytesReaden && !readAllfile {
+		if limit != 0 && bytesToCopy > limit-bytesReaden {
 			bytesToCopy = limit - bytesReaden
 		}
 
-		bytesWritten, err := io.CopyN(targetFile, buffer, bytesToCopy)
+		bytesWritten, err := io.CopyN(targetFile, sourceFile, bytesToCopy)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				bytesReaden += bytesWritten

@@ -18,12 +18,7 @@ type ProggressBar struct {
 	Max int64
 }
 
-func NewProgressBar(file *os.File, offset, limit int64) (*ProggressBar, error) {
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
+func NewProgressBar(fileInfo os.FileInfo, offset, limit int64) (*ProggressBar, error) {
 	if fileInfo.Size() < offset {
 		return nil, fmt.Errorf("offset greater than file size")
 	}
