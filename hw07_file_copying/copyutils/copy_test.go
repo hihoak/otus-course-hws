@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testFilesDirectoryPattern = "../testdata-*"
+	testFilesDirectoryPattern = "testdata-*"
 	testFilesPattern          = "test-*.txt"
 )
 
