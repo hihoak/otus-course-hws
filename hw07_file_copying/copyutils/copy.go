@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/fixme_my_friend/hw07_file_copying/progressbar"
+	"github.com/hihoak/otus-course-hws/hw07_file_copying/progressbar"
 	"github.com/pkg/errors"
 )
 

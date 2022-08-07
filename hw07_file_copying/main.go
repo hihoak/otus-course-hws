@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	copyUtils "github.com/fixme_my_friend/hw07_file_copying/copyutils"
+	copyUtils "github.com/hihoak/otus-course-hws/hw07_file_copying/copyutils"
 )
 
 var (
