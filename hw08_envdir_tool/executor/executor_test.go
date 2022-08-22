@@ -58,12 +58,6 @@ func TestRunCmd(t *testing.T) {
 		require.Equal(t, 1, res)
 	})
 
-	t.Run("failed to start command, wrong flags", func(t *testing.T) {
-		res := RunCmd([]string{"grep", "-asdasda"}, nil)
-
-		require.Equal(t, 2, res)
-	})
-
 	t.Run("all okay", func(t *testing.T) {
 		res := RunCmd([]string{"echo"}, nil)
 
