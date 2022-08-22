@@ -39,6 +39,12 @@ func ReadDir(dir string) (Environment, error) {
 			continue
 		}
 
+		if strings.Contains(file.Name(), "=") ||
+			strings.Contains(file.Name(), " ") ||
+			strings.Contains(file.Name(), "\t") {
+			return nil, fmt.Errorf("env file name can't contains '=', ' ', '\t'")
+		}
+
 		envFile, err := os.Open(file.Name())
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("can't open file '%s'", file.Name()))
@@ -49,6 +55,7 @@ func ReadDir(dir string) (Environment, error) {
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, errors.Wrap(err, fmt.Sprintf("can't read file '%s'", file.Name()))
 		}
+
 		if stringIsNotEmptyRegex.MatchString(envValue) {
 			envValue = strings.TrimSuffix(envValue, "\n")
 			// normalizing string to pass tests. replacing NULL-byte to new line byte
