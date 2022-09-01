@@ -49,6 +49,9 @@ func ReadDir(dir string) (Environment, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("can't open file '%s'", file.Name()))
 		}
+		defer func() {
+			fmt.Println(envFile.Close())
+		}()
 
 		buffer := bufio.NewReader(envFile)
 		envValue, err := buffer.ReadString('\n')
