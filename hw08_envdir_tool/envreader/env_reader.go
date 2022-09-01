@@ -47,15 +47,14 @@ func ReadDir(dir string) (Environment, error) {
 
 		envFile, err := os.Open(file.Name())
 		if err != nil {
+			envFile.Close()
 			return nil, errors.Wrap(err, fmt.Sprintf("can't open file '%s'", file.Name()))
 		}
-		defer func() {
-			fmt.Println(envFile.Close())
-		}()
 
 		buffer := bufio.NewReader(envFile)
 		envValue, err := buffer.ReadString('\n')
 		if err != nil && !errors.Is(err, io.EOF) {
+			envFile.Close()
 			return nil, errors.Wrap(err, fmt.Sprintf("can't read file '%s'", file.Name()))
 		}
 
@@ -73,6 +72,7 @@ func ReadDir(dir string) (Environment, error) {
 			Value:      envValue,
 			NeedRemove: exists,
 		}
+		envFile.Close()
 	}
 
 	return additionalEnvs, nil
