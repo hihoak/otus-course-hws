@@ -45,9 +45,7 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 func updateDomainStat(domainStat DomainStat, user *User, domain string) {
 	if strings.HasSuffix(user.Email, domain) {
 		foundDomain := strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])
-		num := domainStat[foundDomain]
-		num++
-		domainStat[foundDomain] = num
+		domainStat[foundDomain]++
 	}
 }
 
