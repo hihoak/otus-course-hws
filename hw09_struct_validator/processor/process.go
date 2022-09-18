@@ -5,11 +5,16 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/hihoak/otus-course-hws/hw09_struct_validator/pkg"
 	programmerrors "github.com/hihoak/otus-course-hws/hw09_struct_validator/pkg/programm_errors"
 	validationerrors "github.com/hihoak/otus-course-hws/hw09_struct_validator/pkg/validation_errors"
 	methods "github.com/hihoak/otus-course-hws/hw09_struct_validator/processor/methods"
 	"github.com/pkg/errors"
+)
+
+const (
+	ValidateOperatorAnd = "|"
+
+	validatorMethodNameAndValueSeparator = ":"
 )
 
 var supportedValidateMethods = map[reflect.Kind]map[string]func(fieldValue reflect.Value, methodValue string) error{
@@ -25,6 +30,24 @@ var supportedValidateMethods = map[reflect.Kind]map[string]func(fieldValue refle
 	},
 }
 
+type Validator struct {
+	methodName string
+	value      string
+}
+
+func GetValidatorMethodNameAndValue(validator string) (*Validator, error) {
+	// validator - строка типа "min:10"
+	validatorsMethodAndValue := strings.Split(validator, validatorMethodNameAndValueSeparator)
+	if len(validatorsMethodAndValue) != 2 {
+		return nil, fmt.Errorf("not valid syntax of validator method, correct syntax is 'name:value'. Example: 'min:10'")
+	}
+
+	return &Validator{
+		methodName: validatorsMethodAndValue[0],
+		value:      validatorsMethodAndValue[1],
+	}, nil
+}
+
 func ProcessField(fieldType reflect.StructField, fieldValue reflect.Value) (validationerrors.ValidationErrors, error) {
 	validatorTag, ok := fieldType.Tag.Lookup("validate")
 	if !ok {
@@ -37,21 +60,21 @@ func ProcessField(fieldType reflect.StructField, fieldValue reflect.Value) (vali
 	}
 
 	var resultErrors validationerrors.ValidationErrors
-	validators := strings.Split(validatorTag, pkg.ValidateOperatorAnd)
-	for _, validator := range validators {
-		methodName, methodValue, err := pkg.GetValidatorMethodNameAndValue(validator)
+	validators := strings.Split(validatorTag, ValidateOperatorAnd)
+	for _, v := range validators {
+		validator, err := GetValidatorMethodNameAndValue(v)
 		if err != nil {
 			return nil, errors.Wrap(programmerrors.ErrInvalidMethodSyntax,
 				fmt.Sprintf("field '%s' have invalid method syntax: %v", fieldType.Name, err))
 		}
 
-		method, ok := supportedValidateMethods[fieldValue.Kind()][methodName]
+		method, ok := supportedValidateMethods[fieldValue.Kind()][validator.methodName]
 		if !ok {
 			return nil, errors.Wrap(programmerrors.ErrUnsupportedMethod,
-				fmt.Sprintf("validator method '%s' is not supported", methodName))
+				fmt.Sprintf("validator method '%s' is not supported", validator.methodName))
 		}
 
-		err = method(fieldValue, methodValue)
+		err = method(fieldValue, validator.value)
 		if err == nil {
 			continue
 		}
@@ -60,11 +83,11 @@ func ProcessField(fieldType reflect.StructField, fieldValue reflect.Value) (vali
 		if errors.As(err, &validationErr) {
 			resultErrors = append(resultErrors, validationerrors.ValidationError{
 				Field: fieldType.Name,
-				Err:   errors.Wrap(err, fmt.Sprintf("error in '%s' validator method", methodName)),
+				Err:   errors.Wrap(err, fmt.Sprintf("error in '%s' validator method", validator.methodName)),
 			})
 			continue
 		}
-		return nil, errors.Wrap(err, fmt.Sprintf("error in field '%s' and method: '%s'", fieldType.Name, methodName))
+		return nil, errors.Wrap(err, fmt.Sprintf("error in field '%s' and method: '%s'", fieldType.Name, validator.methodName))
 	}
 
 	return resultErrors, nil
