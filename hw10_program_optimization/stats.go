@@ -1,67 +1,64 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"regexp"
 	"strings"
+
+	"github.com/mailru/easyjson"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string
 }
 
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(u, domain)
-}
+	domain = fmt.Sprintf(".%s", domain)
+	domainStat := make(DomainStat)
+	buf := bufio.NewReader(r)
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := ioutil.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
-	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
-
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
+	var user *User
+	var err error
+	for {
+		user, err = getUser(buf)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			return nil, err
 		}
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
-		}
+		updateDomainStat(domainStat, user, domain)
 	}
-	return result, nil
+
+	if user != nil {
+		updateDomainStat(domainStat, user, domain)
+	}
+
+	return domainStat, nil
+}
+
+func updateDomainStat(domainStat DomainStat, user *User, domain string) {
+	if strings.HasSuffix(user.Email, domain) {
+		foundDomain := strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])
+		domainStat[foundDomain]++
+	}
+}
+
+func getUser(buf *bufio.Reader) (*User, error) {
+	data, err := buf.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	user := &User{}
+	if parseErr := easyjson.Unmarshal(data, user); parseErr != nil {
+		return nil, parseErr
+	}
+
+	return user, err
 }
