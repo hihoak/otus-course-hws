@@ -87,7 +87,8 @@ func ProcessField(fieldType reflect.StructField, fieldValue reflect.Value) (vali
 			})
 			continue
 		}
-		return nil, errors.Wrap(err, fmt.Sprintf("error in field '%s' and method: '%s'", fieldType.Name, validator.methodName))
+		return nil, errors.Wrap(err, fmt.Sprintf("error in field '%s' and method: '%s'",
+			fieldType.Name, validator.methodName))
 	}
 
 	return resultErrors, nil
