@@ -60,7 +60,7 @@ func main() {
 			fmt.Println("got an error:", err)
 			return
 		}
-		fmt.Println("work is done successfully")
+		// fmt.Println("work is done successfully")
 	}
 	wg.Wait()
 }
