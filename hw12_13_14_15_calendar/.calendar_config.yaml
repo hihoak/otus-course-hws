@@ -1,0 +1,19 @@
+logger:
+  level: "debug"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  dbname: "postgres"
+  connectiontimeout: 5s
+  operationtimeout: 1s
+
+server:
+  host: localhost
+  port: 8000
+  readtimeout: 1s
+  writetimeout: 1s
+  shutdowntimeout: 3s
+
+use_in_memory_storage: false
