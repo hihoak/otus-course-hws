@@ -3,6 +3,8 @@ package internalhttp
 import (
 	"net/http"
 	"time"
+
+	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 )
 
 type ResponseWriterWithStatus struct {
@@ -21,7 +23,7 @@ func (r *ResponseWriterWithStatus) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
-func loggingMiddleware(logger Logger, next http.Handler) http.Handler {
+func loggingMiddleware(logger app.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		wr := NewResponseWriterWithStatus(w)

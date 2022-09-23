@@ -16,16 +16,12 @@ type Serverer interface {
 	Shutdown(ctx context.Context) error
 }
 
-type Logger interface {
-	app.Logger
-}
-
 type Application interface {
 	CreateEvent(ctx context.Context, id, title string) error
 }
 
 type Server struct {
-	Logg   Logger
+	Logg   app.Logger
 	App    Application
 	Server Serverer
 
@@ -33,7 +29,7 @@ type Server struct {
 }
 
 func NewServer(
-	logger Logger,
+	logger app.Logger,
 	app Application,
 	host, port string,
 	readTimeout, writeTimeout, shutDownTimeout time.Duration,
