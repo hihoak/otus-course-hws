@@ -3,18 +3,25 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/server/http"
+	internalhttp "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/server"
 	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
+	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
 	_ "github.com/lib/pq"
-	"github.com/prometheus/common/log"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -65,8 +72,14 @@ func main() {
 
 	calendar := app.New(logg, st)
 
-	server := internalhttp.NewServer(logg, calendar,
-		config.Server.Host, config.Server.Port, config.Server.ReadTimeout,
+	mux, muxErr := GetGrpcGatewayMultiplexer(ctx, net.JoinHostPort(config.Server.Host, config.Server.GRPCPort))
+	if muxErr != nil {
+		logg.Fatal().Err(err).Msg("failed to register grpc-gateway Multiplexer")
+	}
+
+	server := internalhttp.NewServer(ctx, logg, calendar, mux,
+		net.JoinHostPort(config.Server.Host, config.Server.HTTPPort),
+		net.JoinHostPort(config.Server.Host, config.Server.GRPCPort), config.Server.ReadTimeout,
 		config.Server.WriteTimeout, config.Server.ShutDownTimeout)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
@@ -80,24 +93,29 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		if stopError := server.Stop(ctx); stopError != nil {
-			logg.Error().Err(stopError).Msg("failed to stop http server")
-		}
+		server.Stop(ctx)
 		defer close(stopChan)
 	}()
 
+	server.Start(ctx)
 	logg.Info().Msg("calendar is running...")
-
-	if err := server.Start(ctx); err != nil {
-		logg.Error().Err(err).Msg("failed to start http server")
-		cancel()
-		select {
-		// trying to gracefully shutdown
-		case <-time.After(time.Second * 3):
-			logg.Info().Msg("time of graceful shutdown is over :(")
-		case <-stopChan:
-			logg.Info().Msg("stopped until graceful shutdown is over")
-		}
-		os.Exit(1) //nolint:gocritic
+	select {
+	// trying to gracefully shutdown
+	case <-time.After(time.Second * 10):
+		logg.Info().Msg("time of graceful shutdown is over :(")
+	case <-stopChan:
+		logg.Info().Msg("stopped until graceful shutdown is over")
 	}
+	logg.Info().Msg("calendar is stopped")
+}
+
+func GetGrpcGatewayMultiplexer(ctx context.Context, grpcHost string) (http.Handler, error) {
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	err := desc.RegisterEventServiceHandlerFromEndpoint(ctx, mux, grpcHost, opts)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to register grpc-gateway on host %s", grpcHost))
+	}
+
+	return mux, nil
 }

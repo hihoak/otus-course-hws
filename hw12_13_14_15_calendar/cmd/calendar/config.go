@@ -19,8 +19,9 @@ type Config struct {
 }
 
 type ServerConf struct {
-	Host            string
-	Port            string
+	Host            string        `config:"host"`
+	GRPCPort        string        `config:"grpcport"`
+	HTTPPort        string        `config:"httpport"`
 	ReadTimeout     time.Duration `config:"readtimeout"`
 	WriteTimeout    time.Duration `config:"writetimeout"`
 	ShutDownTimeout time.Duration `config:"shutdowntimeout"`

@@ -2,6 +2,7 @@ package sqlstorage
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -24,8 +26,7 @@ type Storage struct {
 	connectionTimeout time.Duration
 	operationTimeout  time.Duration
 
-	log   app.Logger
-	getID xid.ID
+	log app.Logger
 
 	db *sqlx.DB
 }
@@ -45,8 +46,6 @@ func New(
 		operationTimeout:  operationTimeout,
 
 		log: log,
-
-		getID: xid.New(),
 	}
 }
 
@@ -58,11 +57,11 @@ func (s *Storage) Connect(ctx context.Context) error {
 		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 			s.host, s.port, s.user, s.password, s.dbname))
 	if err != nil {
-		return errs.ErrConnectionFailed{Err: err}
+		return errors.Wrap(errs.ErrConnectionFailed, err.Error())
 	}
 	err = db.PingContext(ctx)
 	if err != nil {
-		return errs.ErrPingFailed{Err: err}
+		return errors.Wrap(errs.ErrPingFailed, err.Error())
 	}
 	s.db = db
 	s.log.Info().Msg("Successfully connected to database")
@@ -72,7 +71,7 @@ func (s *Storage) Connect(ctx context.Context) error {
 func (s *Storage) Close(ctx context.Context) error {
 	s.log.Info().Msg("Start closing connection to database...")
 	if err := s.db.Close(); err != nil {
-		return errs.ErrCloseConnectionFailed{Err: err}
+		return errors.Wrap(errs.ErrCloseConnectionFailed, err.Error())
 	}
 	s.log.Info().Msg("Successfully close connection to database")
 	return s.db.Close()
@@ -82,13 +81,13 @@ func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
 	query := `
 		INSERT INTO events (id, title)
         VALUES (:id, :title)`
-	event.ID = s.getID.String()
+	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errs.ErrAddEvent{Err: err}
+		return errors.Wrap(errs.ErrAddEvent, err.Error())
 	}
 	s.log.Debug().Msgf("Successfully add event with id %s", event.ID)
 	return err
@@ -104,7 +103,7 @@ func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errs.ErrUpdateEvent{Err: err}
+		return errors.Wrap(errs.ErrUpdateEvent, err.Error())
 	}
 	s.log.Debug().Msgf("Successfully update event with id %s", event.ID)
 	return nil
@@ -112,12 +111,12 @@ func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {
 
 func (s *Storage) DeleteEvent(ctx context.Context, id string) error {
 	s.log.Debug().Msgf("Start deleting event with id %s", id)
-	query := `DELETE FROM events WHERE id = :id;`
+	query := `DELETE FROM events WHERE id=:id;`
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
-	_, err := s.db.ExecContext(ctx, query, id)
+	_, err := s.db.NamedExecContext(ctx, query, map[string]interface{}{"id": id})
 	if err != nil {
-		return errs.ErrDeleteEvent{Err: err}
+		return errors.Wrap(errs.ErrDeleteEvent, err.Error())
 	}
 	s.log.Debug().Msgf("Successfully deleted event with id %s", id)
 	return nil
@@ -135,7 +134,10 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	row := s.db.QueryRowxContext(ctx, query, id)
 	var event storage.Event
 	if err := row.StructScan(&event); err != nil {
-		return nil, errs.ErrGetEvent{Err: err}
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.Wrap(errs.ErrNotFoundEvent, err.Error())
+		}
+		return nil, errors.Wrap(errs.ErrGetEvent, err.Error())
 	}
 	s.log.Debug().Msgf("Successfully got event with id %s", id)
 	return &event, nil
@@ -156,13 +158,13 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 		}
 	}()
 	if err != nil {
-		return nil, errs.ErrListEvents{Err: err}
+		return nil, errors.Wrap(errs.ErrListEvents, err.Error())
 	}
 	events := make([]*storage.Event, 0)
 	for rows.Next() {
 		var event storage.Event
 		if scanErr := rows.StructScan(&event); scanErr != nil {
-			return nil, errs.ErrListEvents{Err: scanErr}
+			return nil, errors.Wrap(errs.ErrListEvents, scanErr.Error())
 		}
 		events = append(events, &event)
 	}

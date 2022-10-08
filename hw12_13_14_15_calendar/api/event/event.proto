@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package event;
+option go_package = "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar";
+
+import "api/google/api/annotations.proto";
+
+service EventService {
+  rpc CreateEvent(AddEventRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/event/create"
+      body: "*"
+    };
+  }
+
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse) {
+    option (google.api.http) = {
+      post: "/event/get"
+      body: "*"
+    };
+  }
+
+  rpc DeleteEvent(DeleteEventRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/event/delete"
+      body: "*"
+    };
+  }
+
+  rpc ListEvent(ListEventRequest) returns (ListEventResponse) {
+    option (google.api.http) = {
+      post: "/event/list"
+      body: "*"
+    };
+  }
+
+  rpc ModifyEvent(ModifyEventRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/event/modify"
+      body: "*"
+    };
+  }
+}
+
+message AddEventRequest {
+  string id = 1;
+  string title = 2;
+}
+
+message DeleteEventRequest {
+  string id = 1;
+}
+
+message GetEventRequest {
+  string id = 1;
+}
+
+message GetEventResponse {
+  Event event = 1;
+}
+
+message ListEventRequest {}
+
+message ListEventResponse {
+  repeated Event events = 1;
+}
+
+message ModifyEventRequest {
+  string id = 1;
+  string title = 2;
+}
+
+message Event {
+  string id = 1;
+  string title = 2;
+}
+
+message Empty {}

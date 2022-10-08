@@ -11,7 +11,8 @@ database:
 
 server:
   host: localhost
-  port: 8000
+  httpport: 8000
+  grpcport: 9000
   readtimeout: 1s
   writetimeout: 1s
   shutdowntimeout: 3s

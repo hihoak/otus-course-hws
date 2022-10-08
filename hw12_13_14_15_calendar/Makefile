@@ -51,4 +51,5 @@ migrate-down:
 	GOOSE_DRIVER=$(DB_DRIVER) GOOSE_DBSTRING=$(DB_STRING) goose -dir $(MIGRATIONS_FOLDER) down
 
 go-generate:
+	buf generate --path "api/event"
 	go generate ./...

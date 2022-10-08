@@ -2,12 +2,14 @@ package memorystorage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
+	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -15,22 +17,20 @@ type Storage struct {
 	app.Storage
 	data map[string]*storage.Event
 
-	getID xid.ID
-	mu    sync.RWMutex
-	log   app.Logger
+	mu  sync.RWMutex
+	log app.Logger
 }
 
 func New(log *logger.Logger) *Storage {
 	return &Storage{
-		data:  make(map[string]*storage.Event),
-		getID: xid.New(),
-		mu:    sync.RWMutex{},
-		log:   log,
+		data: make(map[string]*storage.Event),
+		mu:   sync.RWMutex{},
+		log:  log,
 	}
 }
 
 func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
-	event.ID = s.getID.String()
+	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	s.mu.Lock()
 	s.data[event.ID] = event
@@ -61,9 +61,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	s.log.Debug().Msgf("Start getting event with id %s", id)
 	event, ok := s.data[id]
 	if !ok {
-		err := errs.ErrNotFoundEvent{ID: id}
-		s.log.Debug().Err(err).Msgf("Can't find event with id %s", id)
-		return nil, err
+		return nil, errors.Wrap(errs.ErrNotFoundEvent, fmt.Sprintf("Can't find event with id %s", id))
 	}
 	s.log.Debug().Msgf("Successfully find event with id %s", id)
 	return event, nil
