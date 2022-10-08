@@ -14,7 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/server"
+	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/server"
 	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
@@ -77,7 +77,7 @@ func main() {
 		logg.Fatal().Err(err).Msg("failed to register grpc-gateway Multiplexer")
 	}
 
-	server := internalhttp.NewServer(ctx, logg, calendar, mux,
+	calendarServer := server.NewServer(ctx, logg, calendar, mux,
 		net.JoinHostPort(config.Server.Host, config.Server.HTTPPort),
 		net.JoinHostPort(config.Server.Host, config.Server.GRPCPort), config.Server.ReadTimeout,
 		config.Server.WriteTimeout, config.Server.ShutDownTimeout)
@@ -93,11 +93,13 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		server.Stop(ctx)
+		calendarServer.Stop(ctx)
 		defer close(stopChan)
 	}()
 
-	server.Start(ctx)
+	if err := calendarServer.Start(ctx); err != nil {
+		logg.Error().Err(err).Msg("failed to start server")
+	}
 	logg.Info().Msg("calendar is running...")
 	select {
 	// trying to gracefully shutdown

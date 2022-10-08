@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//go:generate mockgen -destination server_mocks.go -source server.go -package internalhttp
+//go:generate mockgen -destination server_mocks.go -source server.go -package server
 type Application interface {
 	desc.EventServiceServer
 }
