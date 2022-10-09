@@ -1,5 +1,16 @@
 BIN := "./bin/calendar"
 DOCKER_IMG="calendar:develop"
+DEFAULT_CONFIG_PATH="$(shell pwd)/.calendar_config.yaml"
+MIGRATIONS_FOLDER="migrations"
+
+DB_DRIVER:=${GOOSE_DRIVER}
+ifeq ($(DB_DRIVER),)
+DB_DRIVER:="postgres"
+endif
+DB_STRING:=${GOOSE_DBSTRING}
+ifeq ($(DB_STRING),)
+DB_STRING:="host=localhost port=5432 user=postgres dbname=postgres sslmode=disable"
+endif
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
@@ -8,7 +19,7 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
-	$(BIN) -config ./configs/config.toml
+	$(BIN) -config $(DEFAULT_CONFIG_PATH)
 
 build-img:
 	docker build \
@@ -23,7 +34,7 @@ version: build
 	$(BIN) version
 
 test:
-	go test -race ./internal/... ./pkg/...
+	go test -race ./...
 
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.41.1
@@ -32,3 +43,12 @@ lint: install-lint-deps
 	golangci-lint run ./...
 
 .PHONY: build run build-img run-img version test lint
+
+migrate-up:
+	GOOSE_DRIVER=$(DB_DRIVER) GOOSE_DBSTRING=$(DB_STRING) goose -dir $(MIGRATIONS_FOLDER) up
+
+migrate-down:
+	GOOSE_DRIVER=$(DB_DRIVER) GOOSE_DBSTRING=$(DB_STRING) goose -dir $(MIGRATIONS_FOLDER) down
+
+go-generate:
+	go generate ./...
