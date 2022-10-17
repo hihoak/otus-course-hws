@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/pkg/errors"
