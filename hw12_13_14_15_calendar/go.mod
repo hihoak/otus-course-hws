@@ -7,6 +7,7 @@ require (
 	github.com/go-swagger/go-swagger v0.30.2 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/heetch/confita v0.10.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/kr/pretty v0.3.0 // indirect
@@ -14,6 +15,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.32.1
+	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.0

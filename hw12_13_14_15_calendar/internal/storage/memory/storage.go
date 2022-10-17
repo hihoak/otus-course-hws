@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
@@ -27,6 +28,14 @@ func New(log *logger.Logger) *Storage {
 		mu:   sync.RWMutex{},
 		log:  log,
 	}
+}
+
+func (s *Storage) Connect(ctx context.Context) error {
+	return nil
+}
+
+func (s *Storage) Close(ctx context.Context) error {
+	return nil
 }
 
 func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
@@ -75,4 +84,20 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	}
 	s.log.Debug().Msgf("Successfully listed all events, total: %d", len(events))
 	return events, nil
+}
+
+func (s *Storage) ListEventsToNotify(
+	ctx context.Context,
+	fromTime time.Time,
+	period time.Duration,
+) ([]*storage.Event, error) {
+	return nil, nil
+}
+
+func (s *Storage) DeleteOldEventsBeforeTime(
+	ctx context.Context,
+	fromTime time.Time,
+	maxLiveTime time.Duration,
+) ([]*storage.Event, error) {
+	return nil, nil
 }
