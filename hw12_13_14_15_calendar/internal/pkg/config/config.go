@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"context"
@@ -12,10 +12,37 @@ import (
 // Организация конфига в main принуждает нас сужать API компонентов, использовать
 // при их конструировании только необходимые параметры, а также уменьшает вероятность циклической зависимости.
 type Config struct {
-	Logger             LoggerConf   `config:"logger"`
-	Database           DatabaseConf `config:"database"`
-	Server             ServerConf   `config:"server"`
-	UseInMemoryStorage bool         `config:"use_in_memory_storage"`
+	Logger             LoggerConf    `config:"logger"`
+	Database           DatabaseConf  `config:"database"`
+	Server             ServerConf    `config:"server"`
+	Rabbit             RabbitConf    `config:"rabbit"`
+	Sender             SenderConf    `config:"sender"`
+	Scheduler          SchedulerConf `config:"scheduler"`
+	UseInMemoryStorage bool          `config:"use_in_memory_storage"`
+}
+
+type SenderConf struct {
+	QueueToPullNotifications string `config:"queuetopullnotifications"`
+}
+
+type RabbitConf struct {
+	RabbitURL      string   `config:"rabbiturl"`
+	ExchangesNames []string `config:"exchangesnames"`
+	QueueNames     []string `config:"queuenames"`
+	Bindings       []Bind   `config:"bindings"`
+}
+
+type Bind struct {
+	QueueName    string `config:"queuename"`
+	Key          string `config:"key"`
+	ExchangeName string `config:"exchangename"`
+}
+
+type SchedulerConf struct {
+	ScanPeriod                 time.Duration `config:"scanperiod"`
+	NotifyPeriod               time.Duration `config:"notifyperiod"`
+	EventsDeprecationAgeInDays int64         `config:"eventsdeprecationageindays"`
+	ExchangeToNotifyEvents     string        `config:"exchangetonotifyevents"`
 }
 
 type ServerConf struct {

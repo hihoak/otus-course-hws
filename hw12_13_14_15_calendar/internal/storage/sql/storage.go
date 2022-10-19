@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
@@ -11,6 +12,8 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
+	// needs github.com/lib/pq.
+	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
@@ -152,22 +155,66 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
 	rows, err := s.db.QueryxContext(ctx, query)
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			s.log.Error().Err(closeErr).Msg("Failed to close rows")
-		}
-	}()
 	if err != nil {
 		return nil, errors.Wrap(errs.ErrListEvents, err.Error())
 	}
-	events := make([]*storage.Event, 0)
-	for rows.Next() {
-		var event storage.Event
-		if scanErr := rows.StructScan(&event); scanErr != nil {
-			return nil, errors.Wrap(errs.ErrListEvents, scanErr.Error())
-		}
-		events = append(events, &event)
+	events, err := s.fromSQLRowsToEvents(rows)
+	if err != nil {
+		return nil, errors.Wrap(err, "ListEvents - failed to scan events from rows")
 	}
 	s.log.Debug().Msgf("Successfully list events")
+	return events, nil
+}
+
+func (s *Storage) ListEventsToNotify(ctx context.Context,
+	fromTime time.Time, period time.Duration,
+) ([]*storage.Event, error) {
+	s.log.Debug().Msg("ListEventsToNotify - start method")
+	query := strings.Builder{}
+	query.WriteString(`
+	SELECT id, title, start_date, user_id
+	FROM events `)
+	sqlFromTimeStr := s.timeToSQLTimeWithTimezone(fromTime)
+	sqlToTimeStr := s.timeToSQLTimeWithTimezone(fromTime.Add(period))
+	query.WriteString(
+		fmt.Sprintf("WHERE notify_date >= '%s' AND notify_date <= '%s';",
+			sqlFromTimeStr, sqlToTimeStr))
+	s.log.Debug().Msgf("ListEventsToNotify - try to execute query: '%s'", query.String())
+
+	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
+	defer cancel()
+	rows, err := s.db.QueryxContext(ctx, query.String())
+	if err != nil {
+		return nil, errors.Wrap(errs.ErrListEventsToNotify, err.Error())
+	}
+	events, err := s.fromSQLRowsToEvents(rows)
+	if err != nil {
+		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+	}
+	s.log.Debug().Msgf("ListEventsToNotify: got '%d' events to notify", len(events))
+	return events, nil
+}
+
+func (s *Storage) DeleteOldEventsBeforeTime(
+	ctx context.Context,
+	fromTime time.Time,
+	maxLiveTime time.Duration,
+) ([]*storage.Event, error) {
+	s.log.Debug().Msg("DeleteOldEventsBeforeTime: start deleting old events")
+	query := strings.Builder{}
+	query.WriteString("DELETE FROM events ")
+	query.WriteString(fmt.Sprintf("WHERE '%s' - end_date > '%s' RETURNING *;",
+		s.timeToSQLTimeWithTimezone(fromTime),
+		s.durationToSQLInterval(maxLiveTime)))
+	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: deleting with query: %s", query.String())
+	rows, err := s.db.QueryxContext(ctx, query.String())
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to delete old events with query: %s", query.String()))
+	}
+	events, err := s.fromSQLRowsToEvents(rows)
+	if err != nil {
+		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+	}
+	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete '%d' old events", len(events))
 	return events, nil
 }

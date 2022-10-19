@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
 	storageerrors "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -29,11 +30,21 @@ type Logger interface {
 }
 
 type Storage interface {
+	// common methods
+	Connect(ctx context.Context) error
+	Close(ctx context.Context) error
+
+	// Main app eventsa
 	AddEvent(ctx context.Context, event *storage.Event) error
 	ModifyEvent(ctx context.Context, event *storage.Event) error
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*storage.Event, error)
 	ListEvents(ctx context.Context) ([]*storage.Event, error)
+
+	// Scheduler methods
+	ListEventsToNotify(ctx context.Context, fromTime time.Time, period time.Duration) ([]*storage.Event, error)
+	DeleteOldEventsBeforeTime(ctx context.Context,
+		fromTime time.Time, maxLiveTime time.Duration) ([]*storage.Event, error)
 }
 
 func New(logger Logger, storage Storage) *App {

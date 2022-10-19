@@ -15,4 +15,5 @@ var (
 	ErrDeleteEvent           = errors.New("Failed to delete event from database")
 	ErrGetEvent              = errors.New("Failed to get event from database")
 	ErrListEvents            = errors.New("Failed to list events from database")
+	ErrListEventsToNotify    = errors.New("Failed to list events to notify")
 )
