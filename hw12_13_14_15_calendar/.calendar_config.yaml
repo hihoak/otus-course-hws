@@ -17,6 +17,7 @@ server:
   readtimeout: 1s
   writetimeout: 1s
   shutdowntimeout: 3s
+  gracefulshutdown: 3s
 
 rabbit:
   rabbiturl: "amqp://user:password@localhost:5672"
@@ -38,4 +39,4 @@ scheduler:
   eventsdeprecationageindays: 365
   exchangetonotifyevents: "calendar_scheduler"
 
-use_in_memory_storage: false
+useinmemorystorage: false

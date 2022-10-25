@@ -4,6 +4,8 @@ package event;
 option go_package = "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar";
 
 import "api/google/api/annotations.proto";
+import "api/google/protobuf/timestamp.proto";
+import "api/google/type/datetime.proto";
 
 service EventService {
   rpc CreateEvent(AddEventRequest) returns (Empty) {
@@ -43,8 +45,12 @@ service EventService {
 }
 
 message AddEventRequest {
-  string id = 1;
   string title = 2;
+  google.type.DateTime start_date = 3;
+  google.type.DateTime end_date = 4;
+  string description = 5;
+  string user_id = 6;
+  google.type.DateTime notify_date = 7;
 }
 
 message DeleteEventRequest {
@@ -73,6 +79,11 @@ message ModifyEventRequest {
 message Event {
   string id = 1;
   string title = 2;
+  google.type.DateTime start_date = 3;
+  google.type.DateTime end_date = 4;
+  string description = 5;
+  string user_id = 6;
+  google.type.DateTime notify_date = 7;
 }
 
 message Empty {}

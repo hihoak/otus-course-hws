@@ -30,7 +30,7 @@ func convertToLogLevel(level string) zerolog.Level {
 
 func New(level string) *Logger {
 	return &Logger{
-		logger: zerolog.New(os.Stdout).Level(convertToLogLevel(level)),
+		logger: zerolog.New(os.Stdout).Level(convertToLogLevel(level)).With().Timestamp().Logger(),
 	}
 }
 

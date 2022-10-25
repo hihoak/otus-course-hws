@@ -12,6 +12,7 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
+
 	// needs github.com/lib/pq.
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -82,8 +83,8 @@ func (s *Storage) Close(ctx context.Context) error {
 
 func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
 	query := `
-		INSERT INTO events (id, title)
-        VALUES (:id, :title)`
+		INSERT INTO events (id, title, start_date, end_date, description, user_id, notify_date)
+        VALUES (:id, :title, :start_date, :end_date, :description, :user_id, :notify_date)`
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)

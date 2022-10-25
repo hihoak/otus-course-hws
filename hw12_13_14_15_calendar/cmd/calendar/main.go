@@ -103,7 +103,7 @@ func main() {
 	logg.Info().Msg("calendar is running...")
 	select {
 	// trying to gracefully shutdown
-	case <-time.After(time.Second * 10):
+	case <-time.After(cfg.Server.GracefulShutdown):
 		logg.Info().Msg("time of graceful shutdown is over :(")
 	case <-stopChan:
 		logg.Info().Msg("stopped until graceful shutdown is over")

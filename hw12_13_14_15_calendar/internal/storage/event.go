@@ -10,6 +10,4 @@ type Event struct {
 	Description string     `db:"description"`
 	UserID      string     `db:"user_id"`
 	NotifyDate  *time.Time `db:"notify_date"`
-
-	ScheduledToNotify bool `db:"scheduled_to_notify"`
 }

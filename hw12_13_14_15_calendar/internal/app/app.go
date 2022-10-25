@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/genproto/googleapis/type/datetime"
+
 	storageerrors "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
@@ -69,17 +71,75 @@ func ConvertEventsToPb(events []*storage.Event) []*desc.Event {
 	return res
 }
 
+func ConvertFromPbDateTimeToTime(pbDateTime *datetime.DateTime) *time.Time {
+	goTime := time.Date(
+		int(pbDateTime.Year),
+		time.Month(pbDateTime.Month),
+		int(pbDateTime.Day),
+		int(pbDateTime.Hours),
+		int(pbDateTime.Minutes),
+		int(pbDateTime.Seconds),
+		0,
+		time.UTC,
+	)
+	if pbDateTime.GetUtcOffset() != nil {
+		goTime.Add(pbDateTime.GetUtcOffset().AsDuration())
+	}
+
+	return &goTime
+}
+
+func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.AddEventRequest) (*storage.Event, error) {
+	if event.GetTitle() == "" {
+		return nil, fmt.Errorf("title cannot be empty")
+	}
+
+	var startDate, endDate *time.Time
+	if event.GetEndDate() != nil {
+		endDate = ConvertFromPbDateTimeToTime(event.EndDate)
+	}
+
+	if event.GetStartDate() != nil {
+		startDate = ConvertFromPbDateTimeToTime(event.StartDate)
+	} else if endDate != nil {
+		startDate = endDate
+	} else {
+		startDate = timeNow
+	}
+
+	if endDate.Before(*startDate) {
+		return nil, fmt.Errorf("end_date cannot be before start date")
+	}
+
+	if event.GetUserId() == "" {
+		return nil, fmt.Errorf("user_id cannot be empty")
+	}
+
+	return &storage.Event{
+		Title:       event.GetTitle(),
+		StartDate:   startDate,
+		EndDate:     endDate,
+		Description: event.GetDescription(),
+		UserID:      event.GetUserId(),
+		NotifyDate:  ConvertFromPbDateTimeToTime(event.GetNotifyDate()),
+	}, nil
+}
+
 func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc.Empty, error) {
 	a.Logg.Info().Msg("CreateEvent - start creating event")
-	err := a.Store.AddEvent(ctx, &storage.Event{
-		ID:    req.GetId(),
-		Title: req.GetTitle(),
-	})
-	if err != nil {
-		a.Logg.Error().Err(err).Msgf("Can't create event with ID '%s'", req.GetId())
-		return &desc.Empty{}, errors.Wrap(err, fmt.Sprintf("Can't create event with ID '%s'", req.GetId()))
+	timeNow := time.Now()
+	event, validationErr := validateAndConvertAddEventRequestToEvent(&timeNow, req)
+	if validationErr != nil {
+		validationErr = status.Errorf(codes.InvalidArgument, validationErr.Error())
+		a.Logg.Error().Err(validationErr).Msg("CreateEvent - failed validation")
+		return &desc.Empty{}, validationErr
 	}
-	a.Logg.Info().Msgf("Successfully create event with ID '%s'", req.GetId())
+	err := a.Store.AddEvent(ctx, event)
+	if err != nil {
+		a.Logg.Error().Err(err).Msgf("Can't create event with title '%s'", event.Title)
+		return &desc.Empty{}, errors.Wrap(err, fmt.Sprintf("Can't create event with Title '%s'", event.Title))
+	}
+	a.Logg.Info().Msgf("Successfully create event with Title '%s'", event.Title)
 	return &desc.Empty{}, nil
 }
 
