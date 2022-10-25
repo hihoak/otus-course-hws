@@ -13,6 +13,7 @@ import (
 	"google.golang.org/genproto/googleapis/type/datetime"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 //go:generate mockgen -destination mocks/apps_mocks.go -source app.go -package appsmocks
@@ -57,8 +58,13 @@ func New(logger Logger, storage Storage) *App {
 
 func ConvertEventToPb(event *storage.Event) *desc.Event {
 	return &desc.Event{
-		Id:    event.ID,
-		Title: event.Title,
+		Id:          event.ID,
+		Title:       event.Title,
+		StartDate:   ConvertFromTimeToPbDateTime(event.StartDate),
+		EndDate:     ConvertFromTimeToPbDateTime(event.EndDate),
+		Description: event.Description,
+		UserId:      event.UserID,
+		NotifyDate:  ConvertFromTimeToPbDateTime(event.NotifyDate),
 	}
 }
 
@@ -68,6 +74,25 @@ func ConvertEventsToPb(events []*storage.Event) []*desc.Event {
 		res[idx] = ConvertEventToPb(event)
 	}
 	return res
+}
+
+func ConvertFromTimeToPbDateTime(t *time.Time) *datetime.DateTime {
+	_, offsetInSeconds := t.Zone()
+	return &datetime.DateTime{
+		Year:    int32(t.Year()),
+		Month:   int32(t.Month()),
+		Day:     int32(t.Day()),
+		Hours:   int32(t.Hour()),
+		Minutes: int32(t.Minute()),
+		Seconds: int32(t.Second()),
+		Nanos:   int32(t.Nanosecond()),
+		TimeOffset: &datetime.DateTime_UtcOffset{
+			UtcOffset: &durationpb.Duration{
+				Seconds: int64(offsetInSeconds),
+				Nanos:   0,
+			},
+		},
+	}
 }
 
 func ConvertFromPbDateTimeToTime(pbDateTime *datetime.DateTime) *time.Time {

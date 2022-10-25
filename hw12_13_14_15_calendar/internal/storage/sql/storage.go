@@ -149,7 +149,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	s.log.Debug().Msg("Start listing events")
 	query := `
-	SELECT id, title 
+	SELECT id, title, start_date, end_date, description, user_id, notify_date
 	FROM events;
 	`
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
