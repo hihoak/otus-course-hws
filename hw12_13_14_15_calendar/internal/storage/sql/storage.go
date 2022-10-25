@@ -12,7 +12,6 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
-
 	// needs github.com/lib/pq.
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"

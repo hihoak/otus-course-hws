@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/genproto/googleapis/type/datetime"
-
 	storageerrors "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"google.golang.org/genproto/googleapis/type/datetime"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -99,11 +98,12 @@ func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.Ad
 		endDate = ConvertFromPbDateTimeToTime(event.EndDate)
 	}
 
-	if event.GetStartDate() != nil {
+	switch {
+	case event.GetStartDate() != nil:
 		startDate = ConvertFromPbDateTimeToTime(event.StartDate)
-	} else if endDate != nil {
+	case endDate != nil:
 		startDate = endDate
-	} else {
+	default:
 		startDate = timeNow
 	}
 

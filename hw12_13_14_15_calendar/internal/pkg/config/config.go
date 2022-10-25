@@ -4,9 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/heetch/confita/backend/env"
-
 	"github.com/heetch/confita"
+	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/file"
 )
 
