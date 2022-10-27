@@ -128,7 +128,7 @@ func (s *Storage) DeleteEvent(ctx context.Context, id string) error {
 func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
 	s.log.Debug().Msgf("Start getting event with id %s", id)
 	query := `
-	SELECT id, title 
+	SELECT id, title, start_date, end_date, description, user_id, notify_date 
 	FROM events
 	WHERE id=$1;
 	`

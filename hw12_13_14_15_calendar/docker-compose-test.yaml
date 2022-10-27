@@ -1,0 +1,48 @@
+version: "3.8"
+services:
+  tests:
+    build:
+      dockerfile: build/integration_tests/Dockerfile
+      context: .
+    environment:
+      DB_DSN: host=postgres port=5432 user=postgres password=password dbname=postgres sslmode=disable
+      CALENDAR_API_URL: http://calendar-api:8000
+    depends_on:
+      - postgres
+      - calendar-api
+
+  migrations:
+    image: "docker.io/soundsofanarchy/otus-calendar-migrations-image:v0.0.2"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: "postgres:15.0"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - "postgres:/var/lib/postgresql/data"
+
+  calendar-api:
+    image: "docker.io/soundsofanarchy/otus-calendar:v0.0.6"
+    depends_on:
+      - postgres
+      - migrations
+    environment:
+      SERVER_HOST: "0.0.0.0"
+      USE_IN_MEMORY_STORAGE: "false"
+      DB_HOST: "postgres"
+      DB_USER: "postgres"
+      DB_PASSWORD: "password"
+      LOG_LEVEL: "debug"
+      SERVER_GRACEFUL_SHUTDOWN: "3s"
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+
+volumes:
+  postgres:
+    driver: local

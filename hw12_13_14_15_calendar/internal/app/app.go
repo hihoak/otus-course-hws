@@ -77,6 +77,9 @@ func ConvertEventsToPb(events []*storage.Event) []*desc.Event {
 }
 
 func ConvertFromTimeToPbDateTime(t *time.Time) *datetime.DateTime {
+	if t == nil {
+		return nil
+	}
 	_, offsetInSeconds := t.Zone()
 	return &datetime.DateTime{
 		Year:    int32(t.Year()),
@@ -96,6 +99,9 @@ func ConvertFromTimeToPbDateTime(t *time.Time) *datetime.DateTime {
 }
 
 func ConvertFromPbDateTimeToTime(pbDateTime *datetime.DateTime) *time.Time {
+	if pbDateTime == nil {
+		return nil
+	}
 	goTime := time.Date(
 		int(pbDateTime.Year),
 		time.Month(pbDateTime.Month),
@@ -132,7 +138,7 @@ func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.Ad
 		startDate = timeNow
 	}
 
-	if endDate.Before(*startDate) {
+	if endDate != nil && endDate.Before(*startDate) {
 		return nil, fmt.Errorf("end_date cannot be before start date")
 	}
 
