@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package sys_exporter;
+option go_package = "github.com/hihoak/otus-course-hws/sys-exporter";
+
+import "api/google/api/annotations.proto";
+
+service ExporterService {
+  rpc SendStreamSnapshots(SendStreamSnapshotsRequest) returns (stream SendStreamSnapshotsResponse) {
+    option (google.api.http) = {
+      post: "/snapshots/send-stream"
+      body: "*"
+    };
+  }
+}
+
+message SendStreamSnapshotsRequest {}
+
+message SendStreamSnapshotsResponse {
+  Snapshot snapshot = 1;
+}
+
+message Snapshot {
+  int64 timestamp = 1;
+  LoadAverage loadAverage = 2;
+
+  message LoadAverage {
+    float for1min = 1;
+    float for5min = 2;
+    float for15min = 3;
+  }
+}

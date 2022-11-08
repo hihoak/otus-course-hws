@@ -1,0 +1,3 @@
+go-generate:
+	buf generate --path "api/sys-exporter"
+	go generate ./...
