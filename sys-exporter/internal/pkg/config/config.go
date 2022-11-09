@@ -20,6 +20,14 @@ type ExporterSection struct {
 	GracefullyShutdownTimeout time.Duration `default:"3s" env:"GRACEFULLY_SHUTDOWN_TIMEOUT"`
 }
 
+type CollectorSection struct {
+	DisableMetrics DisableMetrics
+}
+
+type DisableMetrics struct {
+	LoadAverage bool `default:"false" env:"LOAD_AVERAGE"`
+}
+
 type SnapshotsSection struct {
 	// initial time on start of exporter when it's collecting metrics for first snapshot
 	WarmupInterval time.Duration `default:"5s" env:"WARMUP_INTERVAL"`
@@ -48,6 +56,7 @@ type Config struct {
 	MemoryStorage MemoryStorageSection
 	Snapshots     SnapshotsSection
 	Server        ServerSection
+	Collector     CollectorSection
 }
 
 func New(configPath string) *Config {

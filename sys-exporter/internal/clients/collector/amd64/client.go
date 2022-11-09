@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
+
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 
 	"github.com/pkg/errors"
@@ -19,17 +21,29 @@ import (
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 )
 
+type metricFunctionsNames int
+
+const (
+	loadAverage metricFunctionsNames = iota
+)
+
 type CollectorAMD64 struct {
 	logg *logger.Logger
 
-	metricFunctions []func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError
+	metricFunctions map[metricFunctionsNames]func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError
 }
 
-func New(logg *logger.Logger) *CollectorAMD64 {
+func New(cfg config.CollectorSection, logg *logger.Logger) *CollectorAMD64 {
+	metricFunctions := make(map[metricFunctionsNames]func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError)
+	if !cfg.DisableMetrics.LoadAverage {
+		logg.Debug().Msgf("Collector: will collect load average")
+		metricFunctions[loadAverage] = getLoadAverage
+	}
+
 	return &CollectorAMD64{
 		logg: logg,
 
-		metricFunctions: []func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError{getLoadAverage},
+		metricFunctions: metricFunctions,
 	}
 }
 
