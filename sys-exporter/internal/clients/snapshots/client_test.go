@@ -4,12 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
+	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSnapshots(t *testing.T) {
@@ -81,7 +79,8 @@ func TestSnapshots(t *testing.T) {
 		for _, d := range tc.datas {
 			snapsh.Push(ctx, d)
 		}
-		res := snapsh.calculateSnapshot()
+		res, err := snapsh.calculateSnapshot()
+		require.NoError(t, err)
 		require.InDelta(t, tc.expectedResults.LoadAverage.For1Min, res.LoadAverage.For1Min, 0.0001)
 		require.InDelta(t, tc.expectedResults.LoadAverage.For5min, res.LoadAverage.For5min, 0.0001)
 		require.InDelta(t, tc.expectedResults.LoadAverage.For15min, res.LoadAverage.For15min, 0.0001)
@@ -159,7 +158,8 @@ func TestMultiSnapshots(t *testing.T) {
 			for _, d := range datas {
 				snapsh.Push(ctx, d)
 			}
-			res := snapsh.calculateSnapshot()
+			res, err := snapsh.calculateSnapshot()
+			require.NoError(t, err)
 			require.InDelta(t, tc.expectedResults[idx].LoadAverage.For1Min, res.LoadAverage.For1Min, 0.0001)
 			require.InDelta(t, tc.expectedResults[idx].LoadAverage.For5min, res.LoadAverage.For5min, 0.0001)
 			require.InDelta(t, tc.expectedResults[idx].LoadAverage.For15min, res.LoadAverage.For15min, 0.0001)

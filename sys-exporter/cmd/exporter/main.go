@@ -5,18 +5,15 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/clockwork"
+	"time"
 
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal"
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/memorystorage"
-
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/clockwork"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/amd64"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/snapshots"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/memorystorage"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 )
@@ -54,15 +51,19 @@ func main() {
 	serv := server.New(cfg.Server, logg)
 
 	impl := internal.NewImpl(ctx, cfg, logg, clock, storager, snapshoter, collector, serv)
-	if startErr := impl.Start(ctx); startErr != nil {
-		logg.Fatal().Err(startErr).Msg("failed to start implementation")
-	}
-	defer func() {
-		if err := impl.Stop(ctx); err != nil {
-			logg.Error().Err(err).Msg("something goes wrong when stopping implementation")
+	go func() {
+		if startErr := impl.Start(ctx); startErr != nil {
+			logg.Fatal().Err(startErr).Msg("failed to start implementation")
 		}
 	}()
-	signalChan := make(chan os.Signal)
+
+	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
+
+	if err := impl.Stop(ctx); err != nil {
+		logg.Error().Err(err).Msg("something goes wrong when stopping implementation")
+	}
+
+	time.Sleep(time.Second * 20)
 }

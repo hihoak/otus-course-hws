@@ -4,9 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/cristalhq/aconfig/aconfigyaml"
-
 	"github.com/cristalhq/aconfig"
+	"github.com/cristalhq/aconfig/aconfigyaml"
 )
 
 type ExporterSection struct {

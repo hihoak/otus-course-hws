@@ -2,12 +2,11 @@ package snapshots
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
-
+	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 )
 
@@ -70,15 +69,18 @@ func (s *Snapshots) CreateSnapshots(ctx context.Context) <-chan *datastructures.
 			select {
 			case <-s.ticker.C:
 				s.logg.Debug().Msg("start calculating snapshot")
-				s.snapshotsChan <- s.calculateSnapshot()
+				snapshot, calcErr := s.calculateSnapshot()
+				if calcErr != nil {
+					s.logg.Error().Err(calcErr).Msg("Snapshoter: failed to calculate snapshot")
+					continue
+				}
+				s.snapshotsChan <- snapshot
 				if s.itsWarmup {
 					s.logg.Debug().Msgf("warmup is over now calculating snapshots with interval of '%s'", s.snapshotInterval)
 					s.itsWarmup = false
 					s.ticker.Reset(s.snapshotInterval)
 				}
 			case <-s.doneChan:
-				s.logg.Info().Msg("calculate last snapshot")
-				s.snapshotsChan <- s.calculateSnapshot()
 				close(s.snapshotsChan)
 				s.logg.Info().Msg("creating snapshots is stopped")
 				return
@@ -88,7 +90,11 @@ func (s *Snapshots) CreateSnapshots(ctx context.Context) <-chan *datastructures.
 	return s.snapshotsChan
 }
 
-func (s *Snapshots) calculateSnapshot() *datastructures.SysData {
+func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
+	if s.countOfSysData == 0 {
+		return nil, fmt.Errorf("can't calculate snapshot, " +
+			"because of zero metrics was received for the last snapshot interval")
+	}
 	snapshot := &datastructures.SysData{
 		TimeNow: time.Now(),
 		LoadAverage: &datastructures.LoadAverage{
@@ -101,7 +107,7 @@ func (s *Snapshots) calculateSnapshot() *datastructures.SysData {
 		LoadAverage: &datastructures.LoadAverage{},
 	}
 	s.countOfSysData = 0
-	return snapshot
+	return snapshot, nil
 }
 
 func (s *Snapshots) Close(ctx context.Context) {

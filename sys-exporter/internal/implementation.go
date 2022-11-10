@@ -5,14 +5,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/api/exporter"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 	desc "github.com/hihoak/otus-course-hws/sys-exporter/pkg/api/sys-exporter"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/api/exporter"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 )
 
 const (
@@ -20,29 +17,29 @@ const (
 	storageSnapshots = "storageSnapshots"
 )
 
-// Storager - load and saves all data what exporting during work
+// Storager - load and saves all data what exporting during work.
 type Storager interface {
 	Save(ctx context.Context, data []byte, timestamp time.Time) error
 }
 
-// Collectorer - collecting (exporting) data from system, depending on arch
+// Collectorer - collecting (exporting) data from system, depending on arch.
 type Collectorer interface {
 	Export(ctx context.Context, timeNow time.Time) (*datastructures.SysData, error)
 }
 
-// Snapshoter - convert all metrics to a snapshot depending on configuration
+// Snapshoter - convert all metrics to a snapshot depending on configuration.
 type Snapshoter interface {
 	Push(ctx context.Context, data *datastructures.SysData)
 	CreateSnapshots(ctx context.Context) <-chan *datastructures.SysData
 	Close(ctx context.Context)
 }
 
-// Clockwork - clock interface
+// Clockwork - clock interface.
 type Clockwork interface {
 	Now() time.Time
 }
 
-// Serverer - one who cares GRPC server
+// Serverer - one who cares GRPC server.
 type Serverer interface {
 	Start(exporterService desc.ExporterServiceServer) error
 	Stop()
@@ -61,7 +58,16 @@ type Implementation struct {
 	server    Serverer
 }
 
-func NewImpl(ctx context.Context, cfg *config.Config, logg *logger.Logger, clock Clockwork, storage Storager, snapshots Snapshoter, colector Collectorer, server Serverer) *Implementation {
+func NewImpl(
+	_ context.Context,
+	cfg *config.Config,
+	logg *logger.Logger,
+	clock Clockwork,
+	storage Storager,
+	snapshots Snapshoter,
+	colector Collectorer,
+	server Serverer,
+) *Implementation {
 	return &Implementation{
 		cfg: cfg,
 
@@ -98,7 +104,8 @@ func (i *Implementation) startCollector(ctx context.Context, errChan chan<- erro
 					dataChan <- data
 				}()
 			case <-i.doneChan:
-				i.logg.Info().Msg("stop exporting data. Got a stop signal")
+				i.logg.Info().Msg("healthily stop exporting data. Got a stop signal")
+				return
 			}
 		}
 	}()
@@ -118,9 +125,12 @@ func (i *Implementation) startStorage(ctx context.Context, data <-chan *datastru
 			}
 			if timer == nil {
 				go func() {
-					i.logg.Warn().Msgf("start timer of gracefully shutdown work of storage, for waiting to store all snapshots '%s'", i.cfg.Exporter.GracefullyShutdownTimeout)
+					i.logg.Warn().
+						Msgf("Storager: start timer of gracefully shutdown work of storage, "+
+							"for waiting to store all snapshots '%s'",
+							i.cfg.Exporter.GracefullyShutdownTimeout)
 					timer = time.NewTimer(i.cfg.Exporter.GracefullyShutdownTimeout)
-					_ = <-timer.C
+					<-timer.C
 					end = true
 				}()
 			}
@@ -141,10 +151,14 @@ func (i *Implementation) startStorage(ctx context.Context, data <-chan *datastru
 		}
 		i.logg.Debug().Msgf("successfully store data into")
 	}
-	i.logg.Info().Msg("Data channel is closed all data was saved. Healthily stopping storager...")
+	i.logg.Info().Msg("Storager: Data channel is closed all data was saved. Healthily stopping storager...")
 }
 
-func (i *Implementation) startSnapshots(ctx context.Context, data <-chan *datastructures.SysData, errChan chan<- error) <-chan *datastructures.SysData {
+func (i *Implementation) startSnapshots(
+	ctx context.Context,
+	data <-chan *datastructures.SysData,
+	_ chan<- error,
+) <-chan *datastructures.SysData {
 	i.logg.Info().Msg("starting snapshoter...")
 
 	snapshotsChan := i.snapshots.CreateSnapshots(ctx)
@@ -162,9 +176,12 @@ func (i *Implementation) startSnapshots(ctx context.Context, data <-chan *datast
 				}
 				if timer == nil {
 					go func() {
-						i.logg.Warn().Msgf("start timer of gracefully shutdown work of snapshoter, for proceed all metrics to snapshots '%s'", i.cfg.Exporter.GracefullyShutdownTimeout)
+						i.logg.Warn().
+							Msgf("Snapshoter: start timer of gracefully shutdown work of snapshoter, "+
+								"for proceed all metrics to snapshots '%s'",
+								i.cfg.Exporter.GracefullyShutdownTimeout)
 						timer = time.NewTimer(i.cfg.Exporter.GracefullyShutdownTimeout)
-						_ = <-timer.C
+						<-timer.C
 						end = true
 					}()
 				}
@@ -172,6 +189,7 @@ func (i *Implementation) startSnapshots(ctx context.Context, data <-chan *datast
 			}
 
 			i.snapshots.Push(ctx, d)
+			time.Sleep(time.Millisecond * 300)
 			i.logg.Debug().Msg("successfully push data to snapshoter")
 		}
 		i.logg.Info().Msg("Data channel is closed all data was pushed to snapshoter. Healthily stopping snapshoter...")
@@ -180,7 +198,11 @@ func (i *Implementation) startSnapshots(ctx context.Context, data <-chan *datast
 	return snapshotsChan
 }
 
-func (i *Implementation) startServer(ctx context.Context, data <-chan *datastructures.SysData, serverErrChan chan error) {
+func (i *Implementation) startServer(
+	_ context.Context,
+	data <-chan *datastructures.SysData,
+	serverErrChan chan error,
+) {
 	i.logg.Info().Msg("Starting API server...")
 	api := exporter.NewExporterService(i.logg, data)
 	go func() {
@@ -190,13 +212,15 @@ func (i *Implementation) startServer(ctx context.Context, data <-chan *datastruc
 		}
 	}()
 	defer i.server.Stop()
-	select {
-	case <-i.doneChan:
+	for range i.doneChan {
 		i.logg.Info().Msg("got a stop signal, stopping API server")
 	}
 }
 
-func (i *Implementation) broadcastChan(ctx context.Context, data <-chan *datastructures.SysData) map[string]chan *datastructures.SysData {
+func (i *Implementation) broadcastChan(
+	_ context.Context,
+	data <-chan *datastructures.SysData,
+) map[string]chan *datastructures.SysData {
 	channels := map[string]chan *datastructures.SysData{
 		storageSnapshots: make(chan *datastructures.SysData),
 		serverSnapshots:  make(chan *datastructures.SysData),

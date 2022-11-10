@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
-
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +33,7 @@ type MemoryStorage struct {
 }
 
 func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*MemoryStorage, error) {
-	if err := fileSystem.MkdirAll(cfg.SnapshotsStoragePath, 0777); err != nil {
+	if err := fileSystem.MkdirAll(cfg.SnapshotsStoragePath, 0o777); err != nil {
 		return nil, errors.Wrap(err, "failed to create directory with snapshots")
 	}
 	return &MemoryStorage{
@@ -49,7 +47,10 @@ func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSy
 
 func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
 	if m.currentFile != nil {
-		renameErr := m.fileSystem.Rename(m.currentFile.Name(), fmt.Sprintf("%s-%d", m.currentFile.Name(), timestamp.UnixNano()))
+		renameErr := m.fileSystem.Rename(
+			m.currentFile.Name(),
+			fmt.Sprintf("%s-%d", m.currentFile.Name(), timestamp.UnixNano()),
+		)
 		if renameErr != nil {
 			return errors.Wrap(renameErr, "failed to rename snapshot file")
 		}
@@ -61,7 +62,7 @@ func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
 
 	file, openErr := m.fileSystem.OpenFile(
 		path.Join(m.storagePath, fmt.Sprintf("snapshots-%d", timestamp.UnixNano())),
-		os.O_CREATE|os.O_WRONLY, 0777)
+		os.O_CREATE|os.O_WRONLY, 0o777)
 	if openErr != nil {
 		return errors.Wrap(openErr, "failed to create snapshot file")
 	}

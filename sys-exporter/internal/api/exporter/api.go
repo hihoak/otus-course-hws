@@ -4,13 +4,13 @@ import (
 	"io"
 
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 	desc "github.com/hihoak/otus-course-hws/sys-exporter/pkg/api/sys-exporter"
 	"github.com/pkg/errors"
 )
 
-type ExporterService struct {
+// ServiceAPI - API of exporter.
+type ServiceAPI struct {
 	desc.ExporterServiceServer
 	logg *logger.Logger
 
@@ -18,7 +18,7 @@ type ExporterService struct {
 	innerSnapshotsChannels *InnerSnapshots
 }
 
-func NewExporterService(logg *logger.Logger, snapshots <-chan *datastructures.SysData) *ExporterService {
+func NewExporterService(logg *logger.Logger, snapshots <-chan *datastructures.SysData) *ServiceAPI {
 	doneChan := make(chan interface{})
 	innerSnapshots := NewInnerSnapshots(cap(snapshots))
 	go func() {
@@ -28,7 +28,7 @@ func NewExporterService(logg *logger.Logger, snapshots <-chan *datastructures.Sy
 		close(doneChan)
 		innerSnapshots.StopAll()
 	}()
-	return &ExporterService{
+	return &ServiceAPI{
 		logg: logg,
 
 		snapshots:              snapshots,
@@ -36,7 +36,10 @@ func NewExporterService(logg *logger.Logger, snapshots <-chan *datastructures.Sy
 	}
 }
 
-func (e *ExporterService) SendStreamSnapshots(_ *desc.SendStreamSnapshotsRequest, stream desc.ExporterService_SendStreamSnapshotsServer) error {
+func (e *ServiceAPI) SendStreamSnapshots(
+	_ *desc.SendStreamSnapshotsRequest,
+	stream desc.ExporterService_SendStreamSnapshotsServer,
+) error {
 	e.logg.Debug().Msg("SendStreamSnapshots: got a connection for pulling snapshots")
 	ch, id := e.innerSnapshotsChannels.CreateNewChannel()
 	e.logg.Debug().Msgf("SendStreamSnapshots: successfully created a new channel with id '%d'", id)
@@ -46,11 +49,14 @@ func (e *ExporterService) SendStreamSnapshots(_ *desc.SendStreamSnapshotsRequest
 		if err := stream.Send(&desc.SendStreamSnapshotsResponse{
 			Snapshot: fromSnapshotToPb(data),
 		}); err != nil {
-			e.logg.Debug().Msgf("SendStreamSnapshots: stop sending snapshots to channel with id '%d' because of fail to send to client", id)
+			e.logg.Debug().
+				Msgf("SendStreamSnapshots: stop sending snapshots to channel with id '%d'"+
+					"because of fail to send to client", id)
 			return errors.Wrap(err, "failed to send snapshot to client")
 		}
 	}
-	e.logg.Debug().Msgf("SendStreamSnapshots: stop sending snapshots to channel with id '%d' because of closed channel", id)
+	e.logg.Debug().
+		Msgf("SendStreamSnapshots: stop sending snapshots to channel with id '%d' because of closed channel", id)
 	return io.EOF
 }
 
