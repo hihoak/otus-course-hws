@@ -10,15 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
-
-	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
-
-	"github.com/pkg/errors"
-
 	collectorerrors "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-errors"
-
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
+	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
+	"github.com/pkg/errors"
 )
 
 type metricFunctionsNames int
@@ -30,11 +26,19 @@ const (
 type CollectorAMD64 struct {
 	logg *logger.Logger
 
-	metricFunctions map[metricFunctionsNames]func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError
+	metricFunctions map[metricFunctionsNames]func(
+		ctx context.Context,
+		logg *logger.Logger,
+		data *datastructures.SysData,
+	) *collectorerrors.ExportError
 }
 
 func New(cfg config.CollectorSection, logg *logger.Logger) *CollectorAMD64 {
-	metricFunctions := make(map[metricFunctionsNames]func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError)
+	metricFunctions := make(map[metricFunctionsNames]func(
+		ctx context.Context,
+		logg *logger.Logger,
+		data *datastructures.SysData,
+	) *collectorerrors.ExportError)
 	if !cfg.DisableMetrics.LoadAverage {
 		logg.Debug().Msgf("Collector: will collect load average")
 		metricFunctions[loadAverage] = getLoadAverage
@@ -74,13 +78,16 @@ func (c *CollectorAMD64) Export(ctx context.Context, timeNow time.Time) (*datast
 	return data, nil
 }
 
-func getLoadAverage(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError {
+func getLoadAverage(
+	_ context.Context,
+	logg *logger.Logger,
+	data *datastructures.SysData,
+) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting load average")
 	loadAvgCmd := exec.Command("sysctl", "-n", "vm.loadavg")
 	out := bytes.Buffer{}
 	loadAvgCmd.Stdout = &out
-	runErr := loadAvgCmd.Run()
-	if runErr != nil {
+	if runErr := loadAvgCmd.Run(); runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
 			Reason:   fmt.Sprintf("failed to get load average: %v", runErr.Error()),
@@ -94,7 +101,7 @@ func getLoadAverage(ctx context.Context, logg *logger.Logger, data *datastructur
 	if len(loadAverages) != 3 {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
-			Reason:   fmt.Sprintf("failed to parse load average output"),
+			Reason:   "failed to parse load average output",
 		}
 	}
 

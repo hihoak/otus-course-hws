@@ -7,18 +7,15 @@ import (
 	"net/http"
 	"time"
 
-	"google.golang.org/grpc/credentials/insecure"
-
+	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
-
-	"github.com/go-echarts/go-echarts/v2/charts"
-
-	desc "github.com/hihoak/otus-course-hws/sys-exporter/pkg/api/sys-exporter"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
+	desc "github.com/hihoak/otus-course-hws/sys-exporter/pkg/api/sys-exporter"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -56,7 +53,7 @@ func main() {
 		for {
 			resp, respErr := stream.Recv()
 			if respErr != nil {
-				if respErr == io.EOF {
+				if errors.Is(respErr, io.EOF) {
 					logg.Info().Msg("stop fetching data from server because of EOF")
 					return
 				}
@@ -77,7 +74,13 @@ func main() {
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		render(writer, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, timestamps)
 	})
-	if err := http.ListenAndServe("localhost:7000", nil); err != nil {
+	server := http.Server{
+		Addr:              "localhost:7000",
+		ReadTimeout:       time.Second,
+		WriteTimeout:      time.Second,
+		ReadHeaderTimeout: time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil {
 		logg.Error().Err(err).Msg("server is stopped")
 	}
 }

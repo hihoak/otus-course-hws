@@ -3,13 +3,11 @@ package server
 import (
 	"net"
 
-	"google.golang.org/grpc"
-
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
-	"github.com/pkg/errors"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 	desc "github.com/hihoak/otus-course-hws/sys-exporter/pkg/api/sys-exporter"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type Server struct {

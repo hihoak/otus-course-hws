@@ -11,10 +11,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	filesystemmocks "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/memorystorage/mocks"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
+	"github.com/stretchr/testify/require"
 )
 
 const tempDirNamePattern = "test_tmp_*"
@@ -46,7 +45,7 @@ func Test_createNewFile(t *testing.T) {
 		mockFileSystem.EXPECT().OpenFile(
 			path.Join(testSnapshotsStoragePath, fmt.Sprintf("snapshots-%d", testTimestamp.UnixNano())),
 			os.O_CREATE|os.O_WRONLY,
-			os.FileMode(0777),
+			os.FileMode(0o777),
 		).Times(1).Return(resFile, nil)
 
 		storage, err := New(
