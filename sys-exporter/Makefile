@@ -10,3 +10,6 @@ install-lint-deps:
 
 lint: install-lint-deps
 	golangci-lint run ./...
+
+build:
+	go build -o bin/exporter cmd/exporter/main.go
