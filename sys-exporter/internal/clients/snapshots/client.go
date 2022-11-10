@@ -54,13 +54,12 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 	}
 }
 
-func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) error {
+func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
 	s.logg.Debug().Msgf("got a new data after push: %v", *data)
 	s.totalSysData.LoadAverage.For1Min += data.LoadAverage.For1Min
 	s.totalSysData.LoadAverage.For5min += data.LoadAverage.For5min
 	s.totalSysData.LoadAverage.For15min += data.LoadAverage.For15min
 	s.countOfSysData++
-	return nil
 }
 
 func (s *Snapshots) CreateSnapshots(ctx context.Context) <-chan *datastructures.SysData {

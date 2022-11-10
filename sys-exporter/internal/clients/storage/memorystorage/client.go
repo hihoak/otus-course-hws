@@ -16,30 +16,40 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate mockgen -destination "./mocks/filesystem.go" -source "client.go" -package filesystemmocks
+type FileSystemer interface {
+	MkdirAll(path string, perm os.FileMode) error
+	Rename(oldpath string, newpath string) error
+	OpenFile(name string, flag int, perm os.FileMode) (*os.File, error)
+}
+
 type MemoryStorage struct {
 	storagePath           string
 	maxSizeOfSnapshotFile int64
 
 	currentFile *os.File
 
+	fileSystem FileSystemer
+
 	logg *logger.Logger
 }
 
-func New(cfg config.MemoryStorageSection, logg *logger.Logger) (*MemoryStorage, error) {
-	if err := os.MkdirAll(cfg.SnapshotsStoragePath, 0777); err != nil {
+func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*MemoryStorage, error) {
+	if err := fileSystem.MkdirAll(cfg.SnapshotsStoragePath, 0777); err != nil {
 		return nil, errors.Wrap(err, "failed to create directory with snapshots")
 	}
 	return &MemoryStorage{
 		storagePath:           cfg.SnapshotsStoragePath,
 		maxSizeOfSnapshotFile: cfg.MaximumSizeOfSnapshotFile,
 
-		logg: logg,
+		fileSystem: fileSystem,
+		logg:       logg,
 	}, nil
 }
 
 func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
 	if m.currentFile != nil {
-		renameErr := os.Rename(m.currentFile.Name(), fmt.Sprintf("%s-%d", m.currentFile.Name(), timestamp.Nanosecond()))
+		renameErr := m.fileSystem.Rename(m.currentFile.Name(), fmt.Sprintf("%s-%d", m.currentFile.Name(), timestamp.UnixNano()))
 		if renameErr != nil {
 			return errors.Wrap(renameErr, "failed to rename snapshot file")
 		}
@@ -49,8 +59,8 @@ func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
 		}
 	}
 
-	file, openErr := os.OpenFile(
-		path.Join(m.storagePath, fmt.Sprintf("snapshots-%d", timestamp.Unix())),
+	file, openErr := m.fileSystem.OpenFile(
+		path.Join(m.storagePath, fmt.Sprintf("snapshots-%d", timestamp.UnixNano())),
 		os.O_CREATE|os.O_WRONLY, 0777)
 	if openErr != nil {
 		return errors.Wrap(openErr, "failed to create snapshot file")
