@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
+
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
 
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/clockwork"
@@ -36,11 +38,13 @@ func main() {
 	cfg := config.New(configPath)
 	logg := logger.New(cfg.Logger)
 
-	collector := amd64.New(logg)
+	collector := amd64.New(cfg.Collector, logg)
 
 	snapshoter := snapshots.New(ctx, logg, cfg.Snapshots)
 
-	storager, err := memorystorage.New(cfg.MemoryStorage, logg)
+	fileSystem := filesystem.New()
+
+	storager, err := memorystorage.New(cfg.MemoryStorage, logg, fileSystem)
 	if err != nil {
 		logg.Fatal().Err(err).Msg("failed to initialize storage")
 	}

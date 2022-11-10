@@ -32,7 +32,7 @@ type Collectorer interface {
 
 // Snapshoter - convert all metrics to a snapshot depending on configuration
 type Snapshoter interface {
-	Push(ctx context.Context, data *datastructures.SysData) error
+	Push(ctx context.Context, data *datastructures.SysData)
 	CreateSnapshots(ctx context.Context) <-chan *datastructures.SysData
 	Close(ctx context.Context)
 }
@@ -171,12 +171,7 @@ func (i *Implementation) startSnapshots(ctx context.Context, data <-chan *datast
 			default:
 			}
 
-			err := i.snapshots.Push(ctx, d)
-			if err != nil {
-				i.logg.Error().Err(err).Msg("failed to push data in a snapshoter")
-				errChan <- err
-				continue
-			}
+			i.snapshots.Push(ctx, d)
 			i.logg.Debug().Msg("successfully push data to snapshoter")
 		}
 		i.logg.Info().Msg("Data channel is closed all data was pushed to snapshoter. Healthily stopping snapshoter...")
