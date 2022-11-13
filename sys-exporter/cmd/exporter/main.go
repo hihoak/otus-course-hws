@@ -7,9 +7,10 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector"
+
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/clockwork"
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/amd64"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/snapshots"
@@ -35,7 +36,7 @@ func main() {
 	cfg := config.New(configPath)
 	logg := logger.New(cfg.Logger)
 
-	collector := amd64.New(cfg.Collector, logg)
+	collectorer := collector.New(cfg.Collector, logg)
 
 	snapshoter := snapshots.New(ctx, logg, cfg.Snapshots)
 
@@ -50,7 +51,7 @@ func main() {
 
 	serv := server.New(cfg.Server, logg)
 
-	impl := internal.NewImpl(ctx, cfg, logg, clock, storager, snapshoter, collector, serv)
+	impl := internal.NewImpl(ctx, cfg, logg, clock, storager, snapshoter, collectorer, serv)
 	go func() {
 		if startErr := impl.Start(ctx); startErr != nil {
 			logg.Fatal().Err(startErr).Msg("failed to start implementation")
@@ -65,5 +66,5 @@ func main() {
 		logg.Error().Err(err).Msg("something goes wrong when stopping implementation")
 	}
 
-	time.Sleep(time.Second * 20)
+	time.Sleep(cfg.Exporter.GracefullyShutdownTimeout)
 }

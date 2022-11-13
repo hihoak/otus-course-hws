@@ -45,7 +45,7 @@ func (e *ServiceAPI) SendStreamSnapshots(
 	e.logg.Debug().Msgf("SendStreamSnapshots: successfully created a new channel with id '%d'", id)
 	defer e.innerSnapshotsChannels.RemoveSnapshotChan(id)
 	for data := range ch {
-		e.logg.Debug().Msgf("SendStreamSnapshots: start sending snapshot to channle with id '%d'", id)
+		e.logg.Debug().Msgf("SendStreamSnapshots: start sending snapshot to channel with id '%d'", id)
 		if err := stream.Send(&desc.SendStreamSnapshotsResponse{
 			Snapshot: fromSnapshotToPb(data),
 		}); err != nil {
@@ -69,8 +69,9 @@ func fromSnapshotToPb(data *datastructures.SysData) *desc.Snapshot {
 
 func fromLoadAverageToPb(data *datastructures.LoadAverage) *desc.Snapshot_LoadAverage {
 	return &desc.Snapshot_LoadAverage{
-		For1Min:  float32(data.For1Min),
-		For5Min:  float32(data.For5min),
-		For15Min: float32(data.For15min),
+		For1Min:     float32(data.For1Min),
+		For5Min:     float32(data.For5min),
+		For15Min:    float32(data.For15min),
+		CpuUsageWin: float32(data.CPUPercentUsage),
 	}
 }

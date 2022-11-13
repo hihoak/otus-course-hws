@@ -46,9 +46,9 @@ func main() {
 	if reqErr != nil {
 		logg.Fatal().Err(reqErr).Msg("failed to establish connection to the server")
 	}
-	logg.Info().Msg("successfully establish connection!")
+	logg.Info().Msg("successfully establish connection! Check your metrics on 'localhost:7000'")
 	var timestamps []string
-	var loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min []opts.LineData
+	var loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, cpuUsage []opts.LineData
 	go func() {
 		for {
 			resp, respErr := stream.Recv()
@@ -68,11 +68,14 @@ func main() {
 			loadAverageFor15Min = append(loadAverageFor15Min, opts.LineData{
 				Value: resp.Snapshot.LoadAverage.For15Min,
 			})
+			cpuUsage = append(cpuUsage, opts.LineData{
+				Value: resp.Snapshot.LoadAverage.CpuUsageWin,
+			})
 			timestamps = append(timestamps, time.Unix(0, resp.Snapshot.Timestamp).Format("15:04:05"))
 		}
 	}()
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		render(writer, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, timestamps)
+		render(writer, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, cpuUsage, timestamps)
 	})
 	server := http.Server{
 		Addr:              "localhost:7000",
@@ -85,7 +88,7 @@ func main() {
 	}
 }
 
-func render(w http.ResponseWriter, la1, la5, la15 []opts.LineData, timestamp []string) {
+func render(w http.ResponseWriter, la1, la5, la15, cpuUsage []opts.LineData, timestamp []string) {
 	// create a new line instance
 	line := charts.NewLine()
 	// set some global options like Title/Legend/ToolTip or anything else
@@ -100,6 +103,7 @@ func render(w http.ResponseWriter, la1, la5, la15 []opts.LineData, timestamp []s
 		AddSeries("Load Average 1 min", la1).
 		AddSeries("Load Average 5 min", la5).
 		AddSeries("Load Average 15 min", la15).
-		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
+		AddSeries("Cpu usage (windows only)", cpuUsage).
+		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: false}))
 	line.Render(w)
 }

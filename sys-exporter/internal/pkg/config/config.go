@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/cristalhq/aconfig"
@@ -60,10 +61,13 @@ type Config struct {
 
 func New(configPath string) *Config {
 	var cfg Config
+
+	if _, err := os.Stat(configPath); err != nil {
+		log.Println("fail to get config file, continue without it:", err)
+	}
+
 	loader := aconfig.LoaderFor(&cfg, aconfig.Config{
 		SkipFlags: true,
-
-		FailOnFileNotFound: true,
 
 		EnvPrefix: "EXPORTER",
 		Files:     []string{configPath},
