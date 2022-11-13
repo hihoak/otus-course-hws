@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	collectorfuntions "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-funtions"
-
 	collectorerrors "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-errors"
+	collectorfuntions "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-funtions"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
@@ -20,8 +19,6 @@ type Collector struct {
 	metricFunctions collectorfuntions.CollectFunctions
 }
 
-//because we have build tags
-//nolint:typecheck
 func New(cfg config.CollectorSection, logg *logger.Logger) *Collector {
 	metricFunctions := make(collectorfuntions.CollectFunctions, 0)
 	if !cfg.DisableMetrics.LoadAverage {

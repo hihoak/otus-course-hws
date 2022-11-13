@@ -7,10 +7,9 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector"
-
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/clockwork"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/snapshots"

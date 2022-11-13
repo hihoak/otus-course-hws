@@ -1,6 +1,3 @@
-//go:build macos_arm_64
-// +build macos_arm_64
-
 package collectorfuntions
 
 import (
