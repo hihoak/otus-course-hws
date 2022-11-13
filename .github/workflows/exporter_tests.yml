@@ -10,7 +10,7 @@ env:
 
 jobs:
   linter:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     if: ${{ contains(github.ref, 'final_project') }}
     steps:
       - name: Set up Go
@@ -28,7 +28,7 @@ jobs:
           working-directory: sys-exporter
 
   tests:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     if: ${{ contains(github.ref, 'final_project') }}
     steps:
       - name: Set up Go
@@ -44,7 +44,7 @@ jobs:
         working-directory: sys-exporter
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     if: ${{ contains(github.ref, 'final_project') }}
     steps:
       - name: Set up Go
