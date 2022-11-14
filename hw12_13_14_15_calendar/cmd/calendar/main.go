@@ -19,7 +19,6 @@ import (
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -116,7 +115,7 @@ func GetGrpcGatewayMultiplexer(ctx context.Context, grpcHost string) (http.Handl
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	err := desc.RegisterEventServiceHandlerFromEndpoint(ctx, mux, grpcHost, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to register grpc-gateway on host %s", grpcHost))
+		return nil, fmt.Errorf("failed to register grpc-gateway on host %s: %w", grpcHost, err)
 	}
 
 	return mux, nil

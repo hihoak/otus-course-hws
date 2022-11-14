@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	storageerrors "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -66,7 +66,7 @@ func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc
 	})
 	if err != nil {
 		a.Logg.Error().Err(err).Msgf("Can't create event with ID '%s'", req.GetId())
-		return &desc.Empty{}, errors.Wrap(err, fmt.Sprintf("Can't create event with ID '%s'", req.GetId()))
+		return &desc.Empty{}, fmt.Errorf("can't create event with ID '%s': %w", req.GetId(), err)
 	}
 	a.Logg.Info().Msgf("Successfully create event with ID '%s'", req.GetId())
 	return &desc.Empty{}, nil
@@ -80,11 +80,10 @@ func (a *App) GetEvent(ctx context.Context, req *desc.GetEventRequest) (*desc.Ge
 		if errors.Is(err, storageerrors.ErrNotFoundEvent) {
 			return nil,
 				status.Error(codes.NotFound,
-					errors.Wrap(err, fmt.Sprintf("Can't find event with ID '%s'", req.GetId())).Error())
+					fmt.Errorf("can't find event with ID '%s': %w", req.GetId(), err).Error())
 		}
 		return nil,
-			status.Error(codes.Internal,
-				errors.Wrap(err, fmt.Sprintf("Can't get event with ID '%s'", req.GetId())).Error())
+			status.Error(codes.Internal, fmt.Errorf("can't get event with ID '%s': %w", req.GetId(), err).Error())
 	}
 	a.Logg.Info().Msgf("Successfully get event with ID '%s'", req.GetId())
 	return &desc.GetEventResponse{
@@ -98,7 +97,7 @@ func (a *App) DeleteEvent(ctx context.Context, req *desc.DeleteEventRequest) (*d
 	if err != nil {
 		return nil,
 			status.Error(codes.Internal,
-				errors.Wrap(err, fmt.Sprintf("Can't delete event with ID '%s'", req.GetId())).Error())
+				fmt.Errorf("can't delete event with ID '%s': %w", req.GetId(), err).Error())
 	}
 	a.Logg.Info().Msgf("Successfully delete event with ID '%s'", req.GetId())
 	return &desc.Empty{}, nil
@@ -108,7 +107,8 @@ func (a *App) ListEvent(ctx context.Context, req *desc.ListEventRequest) (*desc.
 	a.Logg.Info().Msg("ListEvent - start listing events")
 	events, err := a.Store.ListEvents(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, errors.Wrap(err, "Can't list events").Error())
+		return nil, status.Error(codes.Internal,
+			fmt.Errorf("can't list events: %w", err).Error())
 	}
 	a.Logg.Info().Msg("Successfully list events")
 	return &desc.ListEventResponse{
@@ -125,7 +125,7 @@ func (a *App) ModifyEvent(ctx context.Context, req *desc.ModifyEventRequest) (*d
 	if err != nil {
 		return nil,
 			status.Error(codes.Internal,
-				errors.Wrap(err, fmt.Sprintf("Can't modify event with id '%s'", req.GetId())).Error())
+				fmt.Errorf("can't modify event with id '%s': %w", req.GetId(), err).Error())
 	}
 	a.Logg.Info().Msgf("Successfully modify event with id '%s'", req.GetId())
 	return &desc.Empty{}, nil
