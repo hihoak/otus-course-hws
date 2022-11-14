@@ -7,9 +7,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
@@ -81,32 +81,24 @@ func main() {
 		net.JoinHostPort(config.Server.Host, config.Server.GRPCPort), config.Server.ReadTimeout,
 		config.Server.WriteTimeout, config.Server.ShutDownTimeout)
 
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
+	gracefullShutdownChan := make(chan os.Signal, 1)
+	signal.Notify(gracefullShutdownChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	stopChan := make(chan interface{})
 	go func() {
-		<-ctx.Done()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-
-		calendarServer.Stop(ctx)
-		defer close(stopChan)
+		if listenErr := calendarServer.ListenAndServe(ctx); listenErr != nil {
+			logg.Error().Err(listenErr).Msg("failed to start server")
+			close(gracefullShutdownChan)
+		}
 	}()
 
-	if err := calendarServer.Start(ctx); err != nil {
-		logg.Error().Err(err).Msg("failed to start server")
+	<-gracefullShutdownChan
+	ctx, cancel := context.WithTimeout(context.Background(), config.Server.ShutDownTimeout)
+	defer cancel()
+
+	if stopErr := calendarServer.Stop(ctx); stopErr != nil {
+		logg.Fatal().Err(stopErr).Msg("unhealthily stopped calendar")
 	}
-	logg.Info().Msg("calendar is running...")
-	select {
-	// trying to gracefully shutdown
-	case <-time.After(time.Second * 10):
-		logg.Info().Msg("time of graceful shutdown is over :(")
-	case <-stopChan:
-		logg.Info().Msg("stopped until graceful shutdown is over")
-	}
+
 	logg.Info().Msg("calendar is stopped")
 }
 
