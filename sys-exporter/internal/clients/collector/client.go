@@ -20,7 +20,7 @@ type Collector struct {
 }
 
 func New(cfg config.CollectorSection, logg *logger.Logger) *Collector {
-	metricFunctions := make(collectorfuntions.CollectFunctions, 0)
+	metricFunctions := make(collectorfuntions.CollectFunctions)
 	if !cfg.DisableMetrics.LoadAverage {
 		logg.Debug().Msgf("Collector: will collect load average")
 		metricFunctions[collectorfuntions.LoadAverage] = collectorfuntions.ExporterFunctions[collectorfuntions.LoadAverage]
