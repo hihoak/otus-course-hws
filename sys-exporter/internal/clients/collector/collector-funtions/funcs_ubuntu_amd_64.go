@@ -42,13 +42,13 @@ func getLoadAverage(
 	if len(loadAverageInfo) < 3 {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
-			Reason:   fmt.Sprintf("parse error: unexpected number of arguments"),
+			Reason:   "parse error: unexpected number of arguments",
 		}
 	}
 
-	var loadAverages []float64
+	loadAverages := make([]float64, 3)
 
-	for _, stringLA := range loadAverageInfo[:3] {
+	for idx, stringLA := range loadAverageInfo[:3] {
 		floatLA, err := strconv.ParseFloat(stringLA, 64)
 		if err != nil {
 			return &collectorerrors.ExportError{
@@ -56,7 +56,7 @@ func getLoadAverage(
 				Reason:   fmt.Sprintf("parse error: failed to convert la to float: %s", err),
 			}
 		}
-		loadAverages = append(loadAverages, floatLA)
+		loadAverages[idx] = floatLA
 	}
 
 	data.LoadAverage = &datastructures.LoadAverage{
@@ -65,6 +65,8 @@ func getLoadAverage(
 		For15min: loadAverages[2],
 	}
 
-	logg.Debug().Msgf("successfully got load average { %f %f %f }", data.LoadAverage.For1Min, data.LoadAverage.For5min, data.LoadAverage.For15min)
+	logg.Debug().
+		Msgf("successfully got load average { %f %f %f }",
+			data.LoadAverage.For1Min, data.LoadAverage.For5min, data.LoadAverage.For15min)
 	return nil
 }
