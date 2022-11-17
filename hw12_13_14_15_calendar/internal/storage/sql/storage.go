@@ -77,10 +77,13 @@ func (s *Storage) Close(ctx context.Context) error {
 	return s.db.Close()
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, title string) error {
 	query := `
 		INSERT INTO events (id, title)
         VALUES (:id, :title)`
+	event := &storage.Event{
+		Title: title,
+	}
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)

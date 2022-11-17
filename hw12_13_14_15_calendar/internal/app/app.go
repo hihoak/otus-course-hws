@@ -29,7 +29,7 @@ type Logger interface {
 }
 
 type Storage interface {
-	AddEvent(ctx context.Context, event *storage.Event) error
+	AddEvent(ctx context.Context, title string) error
 	ModifyEvent(ctx context.Context, event *storage.Event) error
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*storage.Event, error)
@@ -60,15 +60,12 @@ func ConvertEventsToPb(events []*storage.Event) []*desc.Event {
 
 func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc.Empty, error) {
 	a.Logg.Info().Msg("CreateEvent - start creating event")
-	err := a.Store.AddEvent(ctx, &storage.Event{
-		ID:    req.GetId(),
-		Title: req.GetTitle(),
-	})
+	err := a.Store.AddEvent(ctx, req.GetTitle())
 	if err != nil {
-		a.Logg.Error().Err(err).Msgf("Can't create event with ID '%s'", req.GetId())
-		return &desc.Empty{}, fmt.Errorf("can't create event with ID '%s': %w", req.GetId(), err)
+		a.Logg.Error().Err(err).Msgf("Can't create event with title '%s'", req.GetTitle())
+		return &desc.Empty{}, fmt.Errorf("can't create event with title '%s': %w", req.GetTitle(), err)
 	}
-	a.Logg.Info().Msgf("Successfully create event with ID '%s'", req.GetId())
+	a.Logg.Info().Msgf("Successfully create event with title '%s'", req.GetTitle())
 	return &desc.Empty{}, nil
 }
 

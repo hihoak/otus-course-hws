@@ -28,7 +28,10 @@ func New(log *logger.Logger) *Storage {
 	}
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, title string) error {
+	event := &storage.Event{
+		Title: title,
+	}
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	s.mu.Lock()

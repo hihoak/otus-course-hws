@@ -43,8 +43,7 @@ service EventService {
 }
 
 message AddEventRequest {
-  string id = 1;
-  string title = 2;
+  string title = 1;
 }
 
 message DeleteEventRequest {
