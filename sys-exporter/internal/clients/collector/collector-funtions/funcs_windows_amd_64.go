@@ -49,7 +49,7 @@ func getLoadAverage(
 		}
 	}
 
-	percentageCpuLoad, err := strconv.ParseFloat(splittedByLines[1], 64)
+	percentageCpuLoad, err := strconv.ParseFloat(splittedByLines[1], 32)
 	if err != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
@@ -58,7 +58,7 @@ func getLoadAverage(
 	}
 
 	data.LoadAverage = &datastructures.LoadAverage{
-		CPUPercentUsage: percentageCpuLoad,
+		CPUPercentUsage: float32(percentageCpuLoad),
 	}
 
 	logg.Debug().Msgf("successfully got cpu percent usage: %f", data.LoadAverage.CPUPercentUsage)

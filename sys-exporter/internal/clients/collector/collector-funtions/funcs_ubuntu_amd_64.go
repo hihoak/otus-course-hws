@@ -49,7 +49,7 @@ func getLoadAverage(
 	loadAverages := make([]float64, 3)
 
 	for idx, stringLA := range loadAverageInfo[:3] {
-		floatLA, err := strconv.ParseFloat(stringLA, 64)
+		floatLA, err := strconv.ParseFloat(stringLA, 32)
 		if err != nil {
 			return &collectorerrors.ExportError{
 				FuncName: "load average",
@@ -60,9 +60,9 @@ func getLoadAverage(
 	}
 
 	data.LoadAverage = &datastructures.LoadAverage{
-		For1Min:  loadAverages[0],
-		For5min:  loadAverages[1],
-		For15min: loadAverages[2],
+		For1Min:  float32(loadAverages[0]),
+		For5min:  float32(loadAverages[1]),
+		For15min: float32(loadAverages[2]),
 	}
 
 	logg.Debug().

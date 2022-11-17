@@ -21,7 +21,7 @@ type FileSystemer interface {
 	OpenFile(name string, flag int, perm os.FileMode) (*os.File, error)
 }
 
-type MemoryStorage struct {
+type DiskStorage struct {
 	storagePath           string
 	maxSizeOfSnapshotFile int64
 
@@ -32,11 +32,11 @@ type MemoryStorage struct {
 	logg *logger.Logger
 }
 
-func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*MemoryStorage, error) {
+func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*DiskStorage, error) {
 	if err := fileSystem.MkdirAll(cfg.SnapshotsStoragePath, 0o777); err != nil {
 		return nil, errors.Wrap(err, "failed to create directory with snapshots")
 	}
-	return &MemoryStorage{
+	return &DiskStorage{
 		storagePath:           cfg.SnapshotsStoragePath,
 		maxSizeOfSnapshotFile: cfg.MaximumSizeOfSnapshotFile,
 
@@ -45,7 +45,7 @@ func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSy
 	}, nil
 }
 
-func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
+func (m *DiskStorage) createNewFile(timestamp time.Time) error {
 	if m.currentFile != nil {
 		renameErr := m.fileSystem.Rename(
 			m.currentFile.Name(),
@@ -70,7 +70,7 @@ func (m *MemoryStorage) createNewFile(timestamp time.Time) error {
 	return nil
 }
 
-func (m *MemoryStorage) Save(ctx context.Context, data []byte, timestamp time.Time) error {
+func (m *DiskStorage) Save(_ context.Context, data []byte, timestamp time.Time) error {
 	if m.currentFile == nil {
 		createErr := m.createNewFile(timestamp)
 		if createErr != nil {
