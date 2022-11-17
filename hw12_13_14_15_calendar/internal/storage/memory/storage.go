@@ -10,7 +10,6 @@ import (
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
-	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -38,7 +37,10 @@ func (s *Storage) Close(ctx context.Context) error {
 	return nil
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, title string) error {
+	event := &storage.Event{
+		Title: title,
+	}
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	s.mu.Lock()
@@ -70,7 +72,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	s.log.Debug().Msgf("Start getting event with id %s", id)
 	event, ok := s.data[id]
 	if !ok {
-		return nil, errors.Wrap(errs.ErrNotFoundEvent, fmt.Sprintf("Can't find event with id %s", id))
+		return nil, fmt.Errorf("can't find event with id %s: %w", id, errs.ErrNotFoundEvent)
 	}
 	s.log.Debug().Msgf("Successfully find event with id %s", id)
 	return event, nil

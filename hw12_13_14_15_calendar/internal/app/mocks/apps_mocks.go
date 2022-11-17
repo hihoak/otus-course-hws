@@ -130,17 +130,17 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AddEvent mocks base method.
-func (m *MockStorage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (m *MockStorage) AddEvent(ctx context.Context, title string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddEvent", ctx, event)
+	ret := m.ctrl.Call(m, "AddEvent", ctx, title)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddEvent indicates an expected call of AddEvent.
-func (mr *MockStorageMockRecorder) AddEvent(ctx, event interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) AddEvent(ctx, title interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, title)
 }
 
 // DeleteEvent mocks base method.

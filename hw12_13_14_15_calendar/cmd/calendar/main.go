@@ -7,9 +7,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
@@ -19,7 +19,7 @@ import (
 	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
 	desc "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/pkg/api/event"
-	"github.com/pkg/errors"
+	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -82,32 +82,24 @@ func main() {
 		net.JoinHostPort(cfg.Server.Host, cfg.Server.GRPCPort), cfg.Server.ReadTimeout,
 		cfg.Server.WriteTimeout, cfg.Server.ShutDownTimeout)
 
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
+	gracefullShutdownChan := make(chan os.Signal, 1)
+	signal.Notify(gracefullShutdownChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	stopChan := make(chan interface{})
 	go func() {
-		<-ctx.Done()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-
-		calendarServer.Stop(ctx)
-		defer close(stopChan)
+		if listenErr := calendarServer.ListenAndServe(ctx); listenErr != nil {
+			logg.Error().Err(listenErr).Msg("failed to start server")
+			close(gracefullShutdownChan)
+		}
 	}()
 
-	if err := calendarServer.Start(ctx); err != nil {
-		logg.Error().Err(err).Msg("failed to start server")
+	<-gracefullShutdownChan
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutDownTimeout)
+	defer cancel()
+
+	if stopErr := calendarServer.Stop(ctx); stopErr != nil {
+		logg.Fatal().Err(stopErr).Msg("unhealthily stopped calendar")
 	}
-	logg.Info().Msg("calendar is running...")
-	select {
-	// trying to gracefully shutdown
-	case <-time.After(time.Second * 10):
-		logg.Info().Msg("time of graceful shutdown is over :(")
-	case <-stopChan:
-		logg.Info().Msg("stopped until graceful shutdown is over")
-	}
+
 	logg.Info().Msg("calendar is stopped")
 }
 
@@ -116,7 +108,7 @@ func GetGrpcGatewayMultiplexer(ctx context.Context, grpcHost string) (http.Handl
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	err := desc.RegisterEventServiceHandlerFromEndpoint(ctx, mux, grpcHost, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to register grpc-gateway on host %s", grpcHost))
+		return nil, fmt.Errorf("failed to register grpc-gateway on host %s: %w", grpcHost, err)
 	}
 
 	return mux, nil

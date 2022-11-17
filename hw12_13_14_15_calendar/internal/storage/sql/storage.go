@@ -3,6 +3,7 @@ package sqlstorage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,9 +13,6 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
-	// needs github.com/lib/pq.
-	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -60,11 +58,11 @@ func (s *Storage) Connect(ctx context.Context) error {
 		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 			s.host, s.port, s.user, s.password, s.dbname))
 	if err != nil {
-		return errors.Wrap(errs.ErrConnectionFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrConnectionFailed)
 	}
 	err = db.PingContext(ctx)
 	if err != nil {
-		return errors.Wrap(errs.ErrPingFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrPingFailed)
 	}
 	s.db = db
 	s.log.Info().Msg("Successfully connected to database")
@@ -74,23 +72,26 @@ func (s *Storage) Connect(ctx context.Context) error {
 func (s *Storage) Close(ctx context.Context) error {
 	s.log.Info().Msg("Start closing connection to database...")
 	if err := s.db.Close(); err != nil {
-		return errors.Wrap(errs.ErrCloseConnectionFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrCloseConnectionFailed)
 	}
 	s.log.Info().Msg("Successfully close connection to database")
 	return s.db.Close()
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, title string) error {
 	query := `
 		INSERT INTO events (id, title)
         VALUES (:id, :title)`
+	event := &storage.Event{
+		Title: title,
+	}
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errors.Wrap(errs.ErrAddEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrAddEvent)
 	}
 	s.log.Debug().Msgf("Successfully add event with id %s", event.ID)
 	return err
@@ -106,7 +107,7 @@ func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errors.Wrap(errs.ErrUpdateEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUpdateEvent)
 	}
 	s.log.Debug().Msgf("Successfully update event with id %s", event.ID)
 	return nil
@@ -119,7 +120,7 @@ func (s *Storage) DeleteEvent(ctx context.Context, id string) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, map[string]interface{}{"id": id})
 	if err != nil {
-		return errors.Wrap(errs.ErrDeleteEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrDeleteEvent)
 	}
 	s.log.Debug().Msgf("Successfully deleted event with id %s", id)
 	return nil
@@ -138,9 +139,9 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	var event storage.Event
 	if err := row.StructScan(&event); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.Wrap(errs.ErrNotFoundEvent, err.Error())
+			return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrNotFoundEvent)
 		}
-		return nil, errors.Wrap(errs.ErrGetEvent, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrGetEvent)
 	}
 	s.log.Debug().Msgf("Successfully got event with id %s", id)
 	return &event, nil
@@ -156,11 +157,11 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	defer cancel()
 	rows, err := s.db.QueryxContext(ctx, query)
 	if err != nil {
-		return nil, errors.Wrap(errs.ErrListEvents, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrListEvents)
 	}
-	events, err := s.fromSQLRowsToEvents(rows)
+	events, scanErr := s.fromSQLRowsToEvents(rows)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEvents - failed to scan events from rows")
+		return nil, fmt.Errorf("%s: %w", scanErr.Error(), errs.ErrListEvents)
 	}
 	s.log.Debug().Msgf("Successfully list events")
 	return events, nil
@@ -185,11 +186,11 @@ func (s *Storage) ListEventsToNotify(ctx context.Context,
 	defer cancel()
 	rows, err := s.db.QueryxContext(ctx, query.String())
 	if err != nil {
-		return nil, errors.Wrap(errs.ErrListEventsToNotify, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrListEventsToNotify)
 	}
 	events, err := s.fromSQLRowsToEvents(rows)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+		return nil, fmt.Errorf("ListEventsToNotify - failed to scan events from rows: %w", err)
 	}
 	s.log.Debug().Msgf("ListEventsToNotify: got '%d' events to notify", len(events))
 	return events, nil
@@ -209,11 +210,11 @@ func (s *Storage) DeleteOldEventsBeforeTime(
 	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: deleting with query: %s", query.String())
 	rows, err := s.db.QueryxContext(ctx, query.String())
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to delete old events with query: %s", query.String()))
+		return nil, fmt.Errorf("failed to delete old events with query: %s: %w", query.String(), err)
 	}
 	events, err := s.fromSQLRowsToEvents(rows)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+		return nil, fmt.Errorf("ListEventsToNotify - failed to scan events from rows: %w", err)
 	}
 	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete '%d' old events", len(events))
 	return events, nil
