@@ -69,8 +69,8 @@ func fromSnapshotToPb(data *datastructures.SysData) *desc.Snapshot {
 
 func fromLoadAverageToPb(data *datastructures.LoadAverage) *desc.Snapshot_LoadAverage {
 	return &desc.Snapshot_LoadAverage{
-		For1Min:  float32(data.For1Min),
-		For5Min:  float32(data.For5min),
-		For15Min: float32(data.For15min),
+		For1Min:  data.For1Min,
+		For5Min:  data.For5min,
+		For15Min: data.For15min,
 	}
 }
