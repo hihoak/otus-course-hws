@@ -3,9 +3,9 @@ package datastructures
 import "time"
 
 type LoadAverage struct {
-	For1Min  float64
-	For5min  float64
-	For15min float64
+	For1Min  float32
+	For5min  float32
+	For15min float32
 }
 
 type SysData struct {

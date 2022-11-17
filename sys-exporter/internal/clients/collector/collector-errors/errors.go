@@ -6,28 +6,31 @@ import (
 	"sync"
 )
 
-var multiErrorMu = sync.Mutex{}
-
 type ExportError struct {
 	FuncName string
 	Reason   string
 }
 
-func (e ExportError) String() string {
+func (e *ExportError) String() string {
 	return fmt.Sprintf("%s - %s\n", e.FuncName, e.Reason)
 }
 
 type MultiError struct {
 	fails []*ExportError
+
+	mu *sync.Mutex
 }
 
 func (e *MultiError) Append(err *ExportError) {
-	multiErrorMu.Lock()
+	if e.mu == nil {
+		e.mu = &sync.Mutex{}
+	}
+	e.mu.Lock()
 	e.fails = append(e.fails, err)
-	multiErrorMu.Unlock()
+	e.mu.Unlock()
 }
 
-func (e MultiError) Error() string {
+func (e *MultiError) Error() string {
 	res := strings.Builder{}
 	for _, f := range e.fails {
 		res.WriteString(f.String())

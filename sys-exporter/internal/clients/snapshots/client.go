@@ -22,7 +22,7 @@ type Snapshots struct {
 	// how often to send a snapshots
 	ticker *time.Ticker
 
-	doneChan chan interface{}
+	doneChan <-chan struct{}
 
 	// config parameters
 	// initial time on start of exporter when it's collecting metrics for first snapshot
@@ -44,7 +44,7 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 		},
 		countOfSysData: 0,
 
-		doneChan: make(chan interface{}),
+		doneChan: ctx.Done(),
 
 		warmupInterval:   cfg.WarmupInterval,
 		snapshotInterval: cfg.SnapshotInterval,
@@ -61,7 +61,7 @@ func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
 	s.countOfSysData++
 }
 
-func (s *Snapshots) CreateSnapshots(ctx context.Context) <-chan *datastructures.SysData {
+func (s *Snapshots) CreateSnapshots(_ context.Context) <-chan *datastructures.SysData {
 	s.logg.Debug().Msg("start creating snapshots...")
 	s.ticker = time.NewTicker(s.warmupInterval)
 	go func() {
@@ -98,9 +98,9 @@ func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
 	snapshot := &datastructures.SysData{
 		TimeNow: time.Now(),
 		LoadAverage: &datastructures.LoadAverage{
-			For1Min:  s.totalSysData.LoadAverage.For1Min / float64(s.countOfSysData),
-			For5min:  s.totalSysData.LoadAverage.For5min / float64(s.countOfSysData),
-			For15min: s.totalSysData.LoadAverage.For15min / float64(s.countOfSysData),
+			For1Min:  s.totalSysData.LoadAverage.For1Min / float32(s.countOfSysData),
+			For5min:  s.totalSysData.LoadAverage.For5min / float32(s.countOfSysData),
+			For15min: s.totalSysData.LoadAverage.For15min / float32(s.countOfSysData),
 		},
 	}
 	s.totalSysData = &datastructures.SysData{
@@ -110,7 +110,6 @@ func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
 	return snapshot, nil
 }
 
-func (s *Snapshots) Close(ctx context.Context) {
+func (s *Snapshots) Close(_ context.Context) {
 	s.logg.Info().Msg("start ending create snapshots")
-	close(s.doneChan)
 }

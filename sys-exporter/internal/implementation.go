@@ -49,7 +49,7 @@ type Implementation struct {
 	cfg  *config.Config
 	logg *logger.Logger
 
-	doneChan chan interface{}
+	doneChan <-chan struct{}
 
 	storage   Storager
 	collector Collectorer
@@ -59,7 +59,7 @@ type Implementation struct {
 }
 
 func NewImpl(
-	_ context.Context,
+	ctx context.Context,
 	cfg *config.Config,
 	logg *logger.Logger,
 	clock Clockwork,
@@ -71,7 +71,7 @@ func NewImpl(
 	return &Implementation{
 		cfg: cfg,
 
-		doneChan: make(chan interface{}),
+		doneChan: ctx.Done(),
 
 		logg:      logg,
 		storage:   storage,
@@ -271,8 +271,7 @@ func (i *Implementation) Start(ctx context.Context) error {
 	return <-serverErrChan
 }
 
-func (i *Implementation) Stop(ctx context.Context) error {
+func (i *Implementation) Stop(_ context.Context) error {
 	i.logg.Info().Msg("Stopping exporting data...")
-	close(i.doneChan)
 	return nil
 }

@@ -32,6 +32,9 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer cancel()
+
 	cfg := config.New(configPath)
 	logg := logger.New(cfg.Logger)
 
@@ -57,9 +60,8 @@ func main() {
 		}
 	}()
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+	<-ctx.Done()
+	cancel()
 
 	if err := impl.Stop(ctx); err != nil {
 		logg.Error().Err(err).Msg("something goes wrong when stopping implementation")

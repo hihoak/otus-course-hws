@@ -57,7 +57,7 @@ func (c *CollectorAMD64) Export(ctx context.Context, timeNow time.Time) (*datast
 		TimeNow: timeNow,
 	}
 
-	var multiError collectorerrors.MultiError
+	multiError := &collectorerrors.MultiError{}
 	wg := sync.WaitGroup{}
 	wg.Add(len(c.metricFunctions))
 	for _, metricFunc := range c.metricFunctions {
@@ -105,7 +105,7 @@ func getLoadAverage(
 		}
 	}
 
-	laFor1Min, err := strconv.ParseFloat(loadAverages[0], 64)
+	laFor1Min, err := strconv.ParseFloat(loadAverages[0], 32)
 	if err != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
@@ -128,9 +128,9 @@ func getLoadAverage(
 	}
 
 	data.LoadAverage = &datastructures.LoadAverage{
-		For1Min:  laFor1Min,
-		For5min:  laFor5Min,
-		For15min: laFor15min,
+		For1Min:  float32(laFor1Min),
+		For5min:  float32(laFor5Min),
+		For15min: float32(laFor15min),
 	}
 
 	logg.Debug().Msgf("successfully got load average { %f %f %f }", laFor1Min, laFor5Min, laFor15min)
