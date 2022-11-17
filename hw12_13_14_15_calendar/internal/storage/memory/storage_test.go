@@ -4,11 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
+	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
+	"github.com/stretchr/testify/require"
 )
 
 const testTitle = "hello"
@@ -88,5 +86,49 @@ func TestStorage(t *testing.T) {
 		require.True(t, compareSlices(testEvents, events))
 	})
 
-	t.Run("")
+	t.Run("test storage - Modify new event == Add new event", func(t *testing.T) {
+		st := New(logger.New("debug"))
+
+		testEvent := &storage.Event{
+			ID:    "123",
+			Title: "hello-title",
+		}
+		expectedEvent := &storage.Event{
+			ID:    "234",
+			Title: "new-title",
+		}
+
+		st.data[testEvent.ID] = testEvent
+		require.NoError(t, st.ModifyEvent(context.Background(), expectedEvent))
+		require.Equal(t, 2, len(st.data))
+		require.Equal(t, st.data[testEvent.ID], testEvent)
+		require.Equal(t, st.data[expectedEvent.ID], expectedEvent)
+	})
+
+	t.Run("test storage - Delete event", func(t *testing.T) {
+		st := New(logger.New("debug"))
+
+		testEvent := &storage.Event{
+			ID:    "123",
+			Title: "hello-title",
+		}
+
+		st.data[testEvent.ID] = testEvent
+		require.NoError(t, st.DeleteEvent(context.Background(), testEvent.ID))
+		require.Equal(t, 0, len(st.data))
+	})
+
+	t.Run("test storage - Get event", func(t *testing.T) {
+		st := New(logger.New("debug"))
+
+		expectedEvent := &storage.Event{
+			ID:    "123",
+			Title: "hello-title",
+		}
+
+		st.data[expectedEvent.ID] = expectedEvent
+		event, err := st.GetEvent(context.Background(), expectedEvent.ID)
+		require.NoError(t, err)
+		require.Equal(t, expectedEvent, event)
+	})
 }
