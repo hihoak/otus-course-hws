@@ -55,9 +55,12 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 
 func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
 	s.logg.Debug().Msgf("got a new data after push: %v", *data)
-	s.totalSysData.LoadAverage.For1Min += data.LoadAverage.For1Min
-	s.totalSysData.LoadAverage.For5min += data.LoadAverage.For5min
-	s.totalSysData.LoadAverage.For15min += data.LoadAverage.For15min
+	if data.LoadAverage != nil {
+		s.totalSysData.LoadAverage.For1Min += data.LoadAverage.For1Min
+		s.totalSysData.LoadAverage.For5min += data.LoadAverage.For5min
+		s.totalSysData.LoadAverage.For15min += data.LoadAverage.For15min
+		s.totalSysData.LoadAverage.CPUPercentUsage += data.LoadAverage.CPUPercentUsage
+	}
 	s.countOfSysData++
 }
 
@@ -98,9 +101,10 @@ func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
 	snapshot := &datastructures.SysData{
 		TimeNow: time.Now(),
 		LoadAverage: &datastructures.LoadAverage{
-			For1Min:  s.totalSysData.LoadAverage.For1Min / float32(s.countOfSysData),
-			For5min:  s.totalSysData.LoadAverage.For5min / float32(s.countOfSysData),
-			For15min: s.totalSysData.LoadAverage.For15min / float32(s.countOfSysData),
+			For1Min:         s.totalSysData.LoadAverage.For1Min / float32(s.countOfSysData),
+			For5min:         s.totalSysData.LoadAverage.For5min / float32(s.countOfSysData),
+			For15min:        s.totalSysData.LoadAverage.For15min / float32(s.countOfSysData),
+			CPUPercentUsage: s.totalSysData.LoadAverage.CPUPercentUsage / float32(s.countOfSysData),
 		},
 	}
 	s.totalSysData = &datastructures.SysData{

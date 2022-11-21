@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: go tests
-        run: go test -v -count=1 -race -timeout=1m ./...
+        run: go test -tags "ubuntu_amd_64" -v -count=100 -race -timeout=1m ./...
         working-directory: sys-exporter
 
   build:
@@ -56,12 +56,26 @@ jobs:
         uses: actions/checkout@v3
 
       - name: go build
-        run: go build -o bin/exporter cmd/exporter/main.go
+        run: make build-all
         working-directory: sys-exporter
 
-      - name: Archive binary as artifact
+      - name: Archive binary as amd64-ubuntu artifact
         uses: actions/upload-artifact@v3
         with:
-          name: exporter-binary
-          path: sys-exporter/bin/exporter
+          name: exporter-binary-amd64-ubuntu
+          path: sys-exporter/bin/exporter/exporter_amd64_ubuntu
+          if-no-files-found: error
+
+      - name: Archive binary as arm64-macos artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exporter-binary-arm64-macos
+          path: sys-exporter/bin/exporter/exporter_arm64_macos
+          if-no-files-found: error
+
+      - name: Archive binary as amd64-windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exporter-binary-amd64-windows
+          path: sys-exporter/bin/exporter/exporter_amd64_windows.exe
           if-no-files-found: error

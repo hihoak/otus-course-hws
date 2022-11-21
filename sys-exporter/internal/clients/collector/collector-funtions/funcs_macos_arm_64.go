@@ -1,4 +1,7 @@
-package amd64
+//go:build macos_arm_64
+// +build macos_arm_64
+
+package collectorfuntions
 
 import (
 	"bytes"
@@ -7,75 +10,14 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	collectorerrors "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-errors"
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
-	"github.com/pkg/errors"
 )
 
-type metricFunctionsNames int
-
-const (
-	loadAverage metricFunctionsNames = iota
-)
-
-type CollectorAMD64 struct {
-	logg *logger.Logger
-
-	metricFunctions map[metricFunctionsNames]func(
-		ctx context.Context,
-		logg *logger.Logger,
-		data *datastructures.SysData,
-	) *collectorerrors.ExportError
-}
-
-func New(cfg config.CollectorSection, logg *logger.Logger) *CollectorAMD64 {
-	metricFunctions := make(map[metricFunctionsNames]func(
-		ctx context.Context,
-		logg *logger.Logger,
-		data *datastructures.SysData,
-	) *collectorerrors.ExportError)
-	if !cfg.DisableMetrics.LoadAverage {
-		logg.Debug().Msgf("Collector: will collect load average")
-		metricFunctions[loadAverage] = getLoadAverage
-	}
-
-	return &CollectorAMD64{
-		logg: logg,
-
-		metricFunctions: metricFunctions,
-	}
-}
-
-func (c *CollectorAMD64) Export(ctx context.Context, timeNow time.Time) (*datastructures.SysData, error) {
-	c.logg.Debug().Msgf("start exporting data")
-	data := &datastructures.SysData{
-		TimeNow: timeNow,
-	}
-
-	multiError := &collectorerrors.MultiError{}
-	wg := sync.WaitGroup{}
-	wg.Add(len(c.metricFunctions))
-	for _, metricFunc := range c.metricFunctions {
-		go func(f func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError) {
-			defer wg.Done()
-			err := f(ctx, c.logg, data)
-			if err != nil {
-				multiError.Append(err)
-			}
-		}(metricFunc)
-	}
-	wg.Wait()
-
-	if multiError.Error() != "" {
-		return data, errors.Wrap(multiError, "failed to get full information. Some methods returns error")
-	}
-	c.logg.Debug().Msg("all information successfully exported!")
-	return data, nil
+var ExporterFunctions = CollectFunctions{
+	LoadAverage: getLoadAverage,
 }
 
 func getLoadAverage(

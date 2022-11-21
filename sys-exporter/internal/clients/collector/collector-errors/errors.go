@@ -30,7 +30,7 @@ func (e *MultiError) Append(err *ExportError) {
 	e.mu.Unlock()
 }
 
-func (e *MultiError) Error() string {
+func (e MultiError) Error() string {
 	res := strings.Builder{}
 	for _, f := range e.fails {
 		res.WriteString(f.String())

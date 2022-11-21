@@ -28,5 +28,6 @@ message Snapshot {
     float for1min = 1;
     float for5min = 2;
     float for15min = 3;
+    float cpu_usage_win = 4;
   }
 }

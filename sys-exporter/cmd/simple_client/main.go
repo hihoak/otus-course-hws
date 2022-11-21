@@ -5,6 +5,7 @@ import (
 	"flag"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -20,6 +21,9 @@ import (
 
 const (
 	defaultConfigPath = ".exporter.yaml"
+
+	maxSizeOfData   = 1000
+	truncSizeOfData = 100
 )
 
 var configPath string
@@ -46,9 +50,10 @@ func main() {
 	if reqErr != nil {
 		logg.Fatal().Err(reqErr).Msg("failed to establish connection to the server")
 	}
-	logg.Info().Msg("successfully establish connection!")
+	logg.Info().Msg("successfully establish connection! Check your metrics on 'localhost:7000'")
+	mu := &sync.Mutex{}
 	var timestamps []string
-	var loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min []opts.LineData
+	var loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, cpuUsage []opts.LineData
 	go func() {
 		for {
 			resp, respErr := stream.Recv()
@@ -59,6 +64,13 @@ func main() {
 				}
 				logg.Fatal().Err(respErr).Msg("unexpected error from server")
 			}
+			mu.Lock()
+			if len(timestamps) > maxSizeOfData {
+				timestamps = timestamps[truncSizeOfData:]
+				loadAverageFor1Min = loadAverageFor1Min[truncSizeOfData:]
+				loadAverageFor5Min = loadAverageFor5Min[truncSizeOfData:]
+				loadAverageFor15Min = loadAverageFor15Min[truncSizeOfData:]
+			}
 			loadAverageFor1Min = append(loadAverageFor1Min, opts.LineData{
 				Value: resp.Snapshot.LoadAverage.For1Min,
 			})
@@ -68,11 +80,15 @@ func main() {
 			loadAverageFor15Min = append(loadAverageFor15Min, opts.LineData{
 				Value: resp.Snapshot.LoadAverage.For15Min,
 			})
+			cpuUsage = append(cpuUsage, opts.LineData{
+				Value: resp.Snapshot.LoadAverage.CpuUsageWin,
+			})
 			timestamps = append(timestamps, time.Unix(0, resp.Snapshot.Timestamp).Format("15:04:05"))
+			mu.Unlock()
 		}
 	}()
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		render(writer, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, timestamps)
+		render(writer, mu, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, cpuUsage, timestamps)
 	})
 	server := http.Server{
 		Addr:              "localhost:7000",
@@ -85,7 +101,9 @@ func main() {
 	}
 }
 
-func render(w http.ResponseWriter, la1, la5, la15 []opts.LineData, timestamp []string) {
+func render(w http.ResponseWriter, mu *sync.Mutex, la1, la5, la15, cpuUsage []opts.LineData, timestamp []string) {
+	mu.Lock()
+	defer mu.Unlock()
 	// create a new line instance
 	line := charts.NewLine()
 	// set some global options like Title/Legend/ToolTip or anything else
@@ -100,6 +118,7 @@ func render(w http.ResponseWriter, la1, la5, la15 []opts.LineData, timestamp []s
 		AddSeries("Load Average 1 min", la1).
 		AddSeries("Load Average 5 min", la5).
 		AddSeries("Load Average 15 min", la15).
-		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
+		AddSeries("Cpu usage (windows only)", cpuUsage).
+		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: false}))
 	line.Render(w)
 }
