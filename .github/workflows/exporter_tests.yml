@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: go tests
-        run: go test -tags "ubuntu_amd_64" -v -count=100 -race -timeout=1m ./...
+        run: go test -tags "ubuntu" -v -count=100 -race -timeout=1m ./...
         working-directory: sys-exporter
 
   build:
