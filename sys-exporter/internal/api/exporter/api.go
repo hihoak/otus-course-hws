@@ -59,6 +59,9 @@ func (e *ServiceAPI) SendStreamSnapshots(
 }
 
 func fromSnapshotToPb(data *datastructures.SysData) *desc.Snapshot {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot{
 		Timestamp:         data.TimeNow.UnixNano(),
 		LoadAverage:       fromLoadAverageToPb(data.LoadAverage),
@@ -70,6 +73,9 @@ func fromSnapshotToPb(data *datastructures.SysData) *desc.Snapshot {
 }
 
 func fromLoadAverageToPb(data *datastructures.LoadAverage) *desc.Snapshot_LoadAverage {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot_LoadAverage{
 		For1Min:     data.For1Min,
 		For5Min:     data.For5min,
@@ -79,6 +85,9 @@ func fromLoadAverageToPb(data *datastructures.LoadAverage) *desc.Snapshot_LoadAv
 }
 
 func fromCPUUsageToPb(data *datastructures.CPUUsage) *desc.Snapshot_CpuUsage {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot_CpuUsage{
 		User: data.User,
 		Sys:  data.Sys,
@@ -87,6 +96,9 @@ func fromCPUUsageToPb(data *datastructures.CPUUsage) *desc.Snapshot_CpuUsage {
 }
 
 func fromDiskUsageToPb(data *datastructures.DiskUsage) *desc.Snapshot_DiskUsage {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot_DiskUsage{
 		KbPerTransfer:      data.KbPerTransfer,
 		MbPerSecond:        data.MbPerSecond,
@@ -95,6 +107,9 @@ func fromDiskUsageToPb(data *datastructures.DiskUsage) *desc.Snapshot_DiskUsage 
 }
 
 func fromNetworkTopTalkersToPb(data *datastructures.NetworkTopTalkers) *desc.Snapshot_NetworkTopTalkers {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot_NetworkTopTalkers{
 		ByBytesIn:  fromNetworkTalkersToPbs(data.ByBytesIn),
 		ByBytesOut: fromNetworkTalkersToPbs(data.ByBytesOut),
@@ -117,6 +132,9 @@ func fromNetworkTalkersToPbs(data []*datastructures.NetworkTalker) []*desc.Snaps
 func fromFileSystemInfoToPb(
 	data *datastructures.FileSystemInfo,
 ) *desc.Snapshot_FileSystemInfo {
+	if data == nil {
+		return nil
+	}
 	return &desc.Snapshot_FileSystemInfo{
 		FileSystem: fromFileSystemsToPb(data.FileSystems),
 	}
