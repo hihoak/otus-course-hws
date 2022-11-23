@@ -22,8 +22,36 @@ type Collector struct {
 func New(cfg config.CollectorSection, logg *logger.Logger) *Collector {
 	metricFunctions := make(collectorfuntions.CollectFunctions)
 	if !cfg.DisableMetrics.LoadAverage {
-		logg.Debug().Msgf("Collector: will collect load average")
-		metricFunctions[collectorfuntions.LoadAverage] = collectorfuntions.ExporterFunctions[collectorfuntions.LoadAverage]
+		if f, ok := collectorfuntions.ExporterFunctions[collectorfuntions.LoadAverage]; !ok {
+			logg.Warn().Msgf("Collector: load average metric is not supported yet")
+		} else {
+			logg.Debug().Msgf("Collector: will collect load average")
+			metricFunctions[collectorfuntions.LoadAverage] = f
+		}
+	}
+	if !cfg.DisableMetrics.CPUUsage {
+		if f, ok := collectorfuntions.ExporterFunctions[collectorfuntions.CPUUsage]; !ok {
+			logg.Warn().Msgf("Collector: cpu usage metric is not supported yet")
+		} else {
+			logg.Debug().Msgf("Collector: will collect cpu usage")
+			metricFunctions[collectorfuntions.CPUUsage] = f
+		}
+	}
+	if !cfg.DisableMetrics.DiskUsage {
+		if f, ok := collectorfuntions.ExporterFunctions[collectorfuntions.DiskUsage]; !ok {
+			logg.Warn().Msgf("Collector: disk usage metric is not supported yet")
+		} else {
+			logg.Debug().Msgf("Collector: will collect disk usage")
+			metricFunctions[collectorfuntions.DiskUsage] = f
+		}
+	}
+	if !cfg.DisableMetrics.NetworkTopTalkers {
+		if f, ok := collectorfuntions.ExporterFunctions[collectorfuntions.NetworkTopTalkers]; !ok {
+			logg.Warn().Msgf("Collector: network top talkers metric is not supported yet")
+		} else {
+			logg.Debug().Msgf("Collector: will collect network top talkers")
+			metricFunctions[collectorfuntions.NetworkTopTalkers] = f
+		}
 	}
 
 	return &Collector{
@@ -41,11 +69,18 @@ func (c *Collector) Export(ctx context.Context, timeNow time.Time) (*datastructu
 
 	var multiError collectorerrors.MultiError
 	wg := sync.WaitGroup{}
+	mu := &sync.Mutex{}
 	wg.Add(len(c.metricFunctions))
 	for _, metricFunc := range c.metricFunctions {
-		go func(f func(ctx context.Context, logg *logger.Logger, data *datastructures.SysData) *collectorerrors.ExportError) {
+		go func(f func(
+			ctx context.Context,
+			mu *sync.Mutex,
+			logg *logger.Logger,
+			data *datastructures.SysData,
+		) *collectorerrors.ExportError,
+		) {
 			defer wg.Done()
-			err := f(ctx, c.logg, data)
+			err := f(ctx, mu, c.logg, data)
 			if err != nil {
 				multiError.Append(err)
 			}

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	collectorerrors "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-errors"
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
@@ -22,6 +23,7 @@ var ExporterFunctions = CollectFunctions{
 
 func getLoadAverage(
 	_ context.Context,
+	mu *sync.Mutex,
 	logg *logger.Logger,
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
@@ -57,9 +59,11 @@ func getLoadAverage(
 		}
 	}
 
+	mu.Lock()
 	data.LoadAverage = &datastructures.LoadAverage{
 		CPUPercentUsage: float32(percentageCpuLoad),
 	}
+	mu.Unlock()
 
 	logg.Debug().Msgf("successfully got cpu percent usage: %f", data.LoadAverage.CPUPercentUsage)
 	return nil

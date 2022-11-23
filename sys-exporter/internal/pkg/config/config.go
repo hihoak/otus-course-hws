@@ -25,7 +25,10 @@ type CollectorSection struct {
 }
 
 type DisableMetrics struct {
-	LoadAverage bool `default:"false" env:"LOAD_AVERAGE"`
+	LoadAverage       bool `default:"false" env:"LOAD_AVERAGE" json:"loadAverage"`
+	CPUUsage          bool `default:"false" env:"CPU_USAGE" json:"cpuUsage"`
+	DiskUsage         bool `default:"false" env:"DISK_USAGE" json:"diskUsage"`
+	NetworkTopTalkers bool `default:"false" env:"NETWORK_TOP_TALKERS" json:"networkTopTalkers"`
 }
 
 type SnapshotsSection struct {

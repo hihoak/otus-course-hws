@@ -3,6 +3,7 @@ package snapshots
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
@@ -31,6 +32,8 @@ type Snapshots struct {
 	snapshotInterval time.Duration
 
 	itsWarmup bool
+
+	mu *sync.Mutex
 }
 
 func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) *Snapshots {
@@ -40,7 +43,10 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 		snapshotsChan: make(chan *datastructures.SysData),
 
 		totalSysData: &datastructures.SysData{
-			LoadAverage: &datastructures.LoadAverage{},
+			LoadAverage:    &datastructures.LoadAverage{},
+			CPUUsage:       &datastructures.CPUUsage{},
+			DiskUsage:      &datastructures.DiskUsage{},
+			NetworkTalkers: &datastructures.NetworkTopTalkers{},
 		},
 		countOfSysData: 0,
 
@@ -50,10 +56,13 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 		snapshotInterval: cfg.SnapshotInterval,
 
 		itsWarmup: true,
+
+		mu: &sync.Mutex{},
 	}
 }
 
 func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
+	s.mu.Lock()
 	s.logg.Debug().Msgf("got a new data after push: %v", *data)
 	if data.LoadAverage != nil {
 		s.totalSysData.LoadAverage.For1Min += data.LoadAverage.For1Min
@@ -61,7 +70,19 @@ func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
 		s.totalSysData.LoadAverage.For15min += data.LoadAverage.For15min
 		s.totalSysData.LoadAverage.CPUPercentUsage += data.LoadAverage.CPUPercentUsage
 	}
+	if data.CPUUsage != nil {
+		s.totalSysData.CPUUsage.Sys += data.CPUUsage.Sys
+		s.totalSysData.CPUUsage.User += data.CPUUsage.User
+		s.totalSysData.CPUUsage.Idle += data.CPUUsage.Idle
+	}
+	if data.DiskUsage != nil {
+		s.totalSysData.DiskUsage = data.DiskUsage
+	}
+	if data.NetworkTalkers != nil {
+		s.totalSysData.NetworkTalkers = data.NetworkTalkers
+	}
 	s.countOfSysData++
+	s.mu.Unlock()
 }
 
 func (s *Snapshots) CreateSnapshots(_ context.Context) <-chan *datastructures.SysData {
@@ -106,9 +127,19 @@ func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
 			For15min:        s.totalSysData.LoadAverage.For15min / float32(s.countOfSysData),
 			CPUPercentUsage: s.totalSysData.LoadAverage.CPUPercentUsage / float32(s.countOfSysData),
 		},
+		CPUUsage: &datastructures.CPUUsage{
+			User: s.totalSysData.CPUUsage.User / float32(s.countOfSysData),
+			Sys:  s.totalSysData.CPUUsage.Sys / float32(s.countOfSysData),
+			Idle: s.totalSysData.CPUUsage.Sys / float32(s.countOfSysData),
+		},
+		DiskUsage:      s.totalSysData.DiskUsage,
+		NetworkTalkers: s.totalSysData.NetworkTalkers,
 	}
 	s.totalSysData = &datastructures.SysData{
-		LoadAverage: &datastructures.LoadAverage{},
+		LoadAverage:    &datastructures.LoadAverage{},
+		CPUUsage:       &datastructures.CPUUsage{},
+		DiskUsage:      &datastructures.DiskUsage{},
+		NetworkTalkers: &datastructures.NetworkTopTalkers{},
 	}
 	s.countOfSysData = 0
 	return snapshot, nil

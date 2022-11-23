@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	collectorerrors "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/collector/collector-errors"
 	datastructures "github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/data-structures"
@@ -22,6 +23,7 @@ var ExporterFunctions = CollectFunctions{
 
 func getLoadAverage(
 	_ context.Context,
+	mu *sync.Mutex,
 	logg *logger.Logger,
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
@@ -59,11 +61,13 @@ func getLoadAverage(
 		loadAverages[idx] = floatLA
 	}
 
+	mu.Lock()
 	data.LoadAverage = &datastructures.LoadAverage{
 		For1Min:  float32(loadAverages[0]),
 		For5min:  float32(loadAverages[1]),
 		For15min: float32(loadAverages[2]),
 	}
+	mu.Unlock()
 
 	logg.Debug().
 		Msgf("successfully got load average { %f %f %f }",
