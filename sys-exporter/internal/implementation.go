@@ -93,16 +93,14 @@ func (i *Implementation) startCollector(ctx context.Context, errChan chan<- erro
 		for {
 			select {
 			case <-scrapeTicker.C:
-				go func() {
-					i.logg.Debug().Msg("start exporting...")
-					data, err := i.collector.Export(ctx, i.clock.Now())
-					if err != nil {
-						i.logg.Error().Err(err).Msg("failed to export data")
-						errChan <- err
-					}
-					i.logg.Debug().Msg("successfully export info")
-					dataChan <- data
-				}()
+				i.logg.Debug().Msg("start exporting...")
+				data, err := i.collector.Export(ctx, i.clock.Now())
+				if err != nil {
+					i.logg.Error().Err(err).Msg("failed to export data")
+					errChan <- err
+				}
+				i.logg.Debug().Msg("successfully export info")
+				dataChan <- data
 			case <-i.doneChan:
 				i.logg.Info().Msg("healthily stop exporting data. Got a stop signal")
 				return
