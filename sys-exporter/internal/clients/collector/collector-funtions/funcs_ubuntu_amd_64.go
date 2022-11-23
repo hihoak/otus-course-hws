@@ -4,10 +4,8 @@
 package collectorfuntions
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,17 +26,15 @@ func getLoadAverage(
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting load average")
-	loadAvgCmd := exec.Command("cat", "/proc/loadavg")
-	out := bytes.Buffer{}
-	loadAvgCmd.Stdout = &out
-	if runErr := loadAvgCmd.Run(); runErr != nil {
+	res, runErr := execCMD("cat", "/proc/loadavg")
+	if runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
 			Reason:   fmt.Sprintf("failed to get load average: %v", runErr.Error()),
 		}
 	}
 	// out.String() - returns something like this: 0.07 0.02 0.00 1/510 98
-	trimmedSpace := strings.TrimSpace(out.String())
+	trimmedSpace := strings.TrimSpace(res)
 	loadAverageInfo := strings.Split(trimmedSpace, " ")
 	if len(loadAverageInfo) < 3 {
 		return &collectorerrors.ExportError{
