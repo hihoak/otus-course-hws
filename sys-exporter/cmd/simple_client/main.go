@@ -91,7 +91,7 @@ func main() {
 		render(writer, mu, loadAverageFor1Min, loadAverageFor5Min, loadAverageFor15Min, cpuUsage, timestamps)
 	})
 	server := http.Server{
-		Addr:              "localhost:7000",
+		Addr:              "0.0.0.0:7000",
 		ReadTimeout:       time.Second,
 		WriteTimeout:      time.Second,
 		ReadHeaderTimeout: time.Second,

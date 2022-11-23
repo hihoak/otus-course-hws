@@ -1,5 +1,5 @@
-//go:build windows_amd_64
-// +build windows_amd_64
+//go:build windows
+// +build windows
 
 package collectorfuntions
 

@@ -37,7 +37,7 @@ func (s Server) Start(exporterService desc.ExporterServiceServer) error {
 
 	desc.RegisterExporterServiceServer(s.grpcServer, exporterService)
 
-	s.logg.Info().Msg("Successfully register server. Now starting it...")
+	s.logg.Info().Msgf("Successfully register server. Now starting it on %s", s.address)
 	return s.grpcServer.Serve(listener)
 }
 

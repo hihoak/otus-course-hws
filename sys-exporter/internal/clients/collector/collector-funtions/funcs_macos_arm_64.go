@@ -1,5 +1,5 @@
-//go:build macos_arm_64
-// +build macos_arm_64
+//go:build macos
+// +build macos
 
 package collectorfuntions
 

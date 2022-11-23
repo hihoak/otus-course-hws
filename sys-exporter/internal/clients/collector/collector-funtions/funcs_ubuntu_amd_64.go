@@ -1,5 +1,5 @@
-//go:build ubuntu_amd_64
-// +build ubuntu_amd_64
+//go:build ubuntu
+// +build ubuntu
 
 package collectorfuntions
 
@@ -39,7 +39,6 @@ func getLoadAverage(
 	}
 	// out.String() - returns something like this: 0.07 0.02 0.00 1/510 98
 	trimmedSpace := strings.TrimSpace(out.String())
-	fmt.Println(trimmedSpace)
 	loadAverageInfo := strings.Split(trimmedSpace, " ")
 	if len(loadAverageInfo) < 3 {
 		return &collectorerrors.ExportError{
