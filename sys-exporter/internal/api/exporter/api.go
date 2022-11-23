@@ -19,13 +19,11 @@ type ServiceAPI struct {
 }
 
 func NewExporterService(logg *logger.Logger, snapshots <-chan *datastructures.SysData) *ServiceAPI {
-	doneChan := make(chan interface{})
 	innerSnapshots := NewInnerSnapshots(cap(snapshots))
 	go func() {
 		for data := range snapshots {
 			innerSnapshots.BroadcastSnapshot(data)
 		}
-		close(doneChan)
 		innerSnapshots.StopAll()
 	}()
 	return &ServiceAPI{
@@ -67,6 +65,7 @@ func fromSnapshotToPb(data *datastructures.SysData) *desc.Snapshot {
 		CpuUsage:          fromCPUUsageToPb(data.CPUUsage),
 		DiskUsage:         fromDiskUsageToPb(data.DiskUsage),
 		NetworkTopTalkers: fromNetworkTopTalkersToPb(data.NetworkTalkers),
+		FileSystemInfo:    fromFileSystemInfoToPb(data.FileSystemInfo),
 	}
 }
 
@@ -113,4 +112,48 @@ func fromNetworkTalkersToPbs(data []*datastructures.NetworkTalker) []*desc.Snaps
 		}
 	}
 	return res
+}
+
+func fromFileSystemInfoToPb(
+	data *datastructures.FileSystemInfo,
+) *desc.Snapshot_FileSystemInfo {
+	return &desc.Snapshot_FileSystemInfo{
+		FileSystem: fromFileSystemsToPb(data.FileSystems),
+	}
+}
+
+func fromFileSystemsToPb(
+	data []datastructures.FileSystem,
+) []*desc.Snapshot_FileSystemInfo_FileSystem {
+	res := make([]*desc.Snapshot_FileSystemInfo_FileSystem, len(data))
+	for idx, d := range data {
+		res[idx] = &desc.Snapshot_FileSystemInfo_FileSystem{
+			FileSystem: d.FileSystem,
+			MemoryInfo: fromFileSystemMemoryInfoToPb(d.MemoryInfo),
+			InodeInfo:  fromFileSystemInodeInfoToPb(d.InodeInfo),
+			MountedOn:  d.MountedOn,
+		}
+	}
+	return res
+}
+
+func fromFileSystemMemoryInfoToPb(
+	data datastructures.FileSystemMemoryInfo,
+) *desc.Snapshot_FileSystemInfo_FileSystem_FileSystemMemoryInfo {
+	return &desc.Snapshot_FileSystemInfo_FileSystem_FileSystemMemoryInfo{
+		SizeBytes:       int64(data.SizeBytes),
+		UsedBytes:       int64(data.UsedBytes),
+		AvailableBytes:  int64(data.AvailableBytes),
+		CapacityPercent: data.CapacityPercent,
+	}
+}
+
+func fromFileSystemInodeInfoToPb(
+	data datastructures.FileSystemInodeInfo,
+) *desc.Snapshot_FileSystemInfo_FileSystem_FileSystemInodeInfo {
+	return &desc.Snapshot_FileSystemInfo_FileSystem_FileSystemInodeInfo{
+		InodeUsedPercent: data.InodeUsedPercent,
+		InodeUsed:        int64(data.InodeUsed),
+		InodeFree:        int64(data.InodeFree),
+	}
 }

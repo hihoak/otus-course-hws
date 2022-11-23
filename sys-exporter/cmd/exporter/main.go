@@ -13,7 +13,7 @@ import (
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/filesystem"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/server"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/snapshots"
-	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/memorystorage"
+	"github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/diskstorage"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 )
@@ -44,7 +44,7 @@ func main() {
 
 	fileSystem := filesystem.New()
 
-	storager, err := memorystorage.New(cfg.MemoryStorage, logg, fileSystem)
+	storager, err := diskstorage.New(cfg.DiskStorage, logg, fileSystem)
 	if err != nil {
 		logg.Fatal().Err(err).Msg("failed to initialize storage")
 	}
@@ -63,9 +63,7 @@ func main() {
 	<-ctx.Done()
 	cancel()
 
-	if err := impl.Stop(ctx); err != nil {
-		logg.Error().Err(err).Msg("something goes wrong when stopping implementation")
-	}
+	logg.Info().Msg("Stopping exporting data...")
 
 	time.Sleep(cfg.Exporter.GracefullyShutdownTimeout)
 }

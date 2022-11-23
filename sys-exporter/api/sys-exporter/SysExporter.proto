@@ -26,6 +26,7 @@ message Snapshot {
   CpuUsage    cpuUsage = 3;
   DiskUsage   diskUsage = 4;
   NetworkTopTalkers networkTopTalkers = 5;
+  FileSystemInfo    fileSystemInfo = 6;
 
   message LoadAverage {
     float for1min = 1;
@@ -55,6 +56,30 @@ message Snapshot {
       int64  pid = 2;
       int64  bytesIn = 3;
       int64  bytesOut = 4;
+    }
+  }
+
+  message FileSystemInfo {
+    repeated FileSystem fileSystem = 1;
+
+    message FileSystem {
+      string fileSystem = 1;
+      FileSystemMemoryInfo memoryInfo = 2;
+      FileSystemInodeInfo inodeInfo = 3;
+      string mountedOn = 4;
+
+      message FileSystemMemoryInfo {
+        int64 sizeBytes = 1;
+        int64 usedBytes = 2;
+        int64 availableBytes = 3;
+        float capacityPercent = 4;
+      }
+
+      message FileSystemInodeInfo {
+        int64 inodeUsed = 1;
+        int64 inodeFree = 2;
+        float inodeUsedPercent = 3;
+      }
     }
   }
 }

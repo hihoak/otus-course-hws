@@ -49,12 +49,8 @@ func (i *InnerSnapshots) RemoveSnapshotChan(id string) {
 
 func (i *InnerSnapshots) StopAll() {
 	i.mu.Lock()
-	keys := make([]string, 0)
-	for id := range i.channels {
-		keys = append(keys, id)
-	}
-	for _, key := range keys {
-		close(i.channels[key])
+	for key, channel := range i.channels {
+		close(channel)
 		delete(i.channels, key)
 	}
 	i.mu.Unlock()

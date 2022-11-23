@@ -270,8 +270,3 @@ func (i *Implementation) Start(ctx context.Context) error {
 
 	return <-serverErrChan
 }
-
-func (i *Implementation) Stop(_ context.Context) error {
-	i.logg.Info().Msg("Stopping exporting data...")
-	return nil
-}

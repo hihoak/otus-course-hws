@@ -16,6 +16,7 @@ const (
 	CPUUsage
 	DiskUsage
 	NetworkTopTalkers
+	FileSystemInfo
 )
 
 type CollectFunctions map[metricFunctionsNames]func(

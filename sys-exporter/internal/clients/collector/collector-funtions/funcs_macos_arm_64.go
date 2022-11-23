@@ -4,10 +4,8 @@
 package collectorfuntions
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -20,8 +18,9 @@ import (
 )
 
 var (
-	topCpuRegexp        = regexp.MustCompile(`([0-9]+\.[0-9]+)% user, ([0-9]+\.[0-9]+)% sys, ([0-9]+\.[0-9]+)% idle`)
-	networkTalkerRegexp = regexp.MustCompile(`(.*)\.([0-9]+)\s+([0-9]+)\s+([0-9]+)`)
+	topCpuRegexp         = regexp.MustCompile(`([0-9]+\.[0-9]+)% user, ([0-9]+\.[0-9]+)% sys, ([0-9]+\.[0-9]+)% idle`)
+	networkTalkerRegexp  = regexp.MustCompile(`(.*)\.([0-9]+)\s+([0-9]+)\s+([0-9]+)`)
+	fileSystemInfoRegexp = regexp.MustCompile(`(.*)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)%\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)%\s+(.*)`)
 )
 
 var ExporterFunctions = CollectFunctions{
@@ -29,6 +28,7 @@ var ExporterFunctions = CollectFunctions{
 	CPUUsage:          getCpuUsage,
 	DiskUsage:         diskUsage,
 	NetworkTopTalkers: networkTopTalkers,
+	FileSystemInfo:    fileSystemInfo,
 }
 
 func getLoadAverage(
@@ -38,17 +38,15 @@ func getLoadAverage(
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting load average")
-	loadAvgCmd := exec.Command("sysctl", "-n", "vm.loadavg")
-	out := bytes.Buffer{}
-	loadAvgCmd.Stdout = &out
-	if runErr := loadAvgCmd.Run(); runErr != nil {
+	res, runErr := execCMD("sysctl", "-n", "vm.loadavg")
+	if runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
 			Reason:   fmt.Sprintf("failed to get load average: %v", runErr.Error()),
 		}
 	}
 	// loadAvgCmd.String() - returns something like this { 1.78 1.94 2.08 }
-	trimmedSpace := strings.TrimSpace(out.String())
+	trimmedSpace := strings.TrimSpace(res)
 	removedBrackets := strings.Trim(trimmedSpace, "{}")
 	trimmedSpace = strings.TrimSpace(removedBrackets)
 	loadAverages := strings.Fields(trimmedSpace)
@@ -66,18 +64,18 @@ func getLoadAverage(
 			Reason:   fmt.Sprintf("failed to parse float: %s: %v", loadAverages[0], err),
 		}
 	}
-	laFor5Min, err := strconv.ParseFloat(loadAverages[1], 64)
+	laFor5Min, err := strconv.ParseFloat(loadAverages[1], 32)
 	if err != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
-			Reason:   fmt.Sprintf("failed to parse float: %s: %v", loadAverages[0], err),
+			Reason:   fmt.Sprintf("failed to parse float: %s: %v", loadAverages[1], err),
 		}
 	}
-	laFor15min, err := strconv.ParseFloat(loadAverages[2], 64)
+	laFor15min, err := strconv.ParseFloat(loadAverages[2], 32)
 	if err != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "load average",
-			Reason:   fmt.Sprintf("failed to parse float: %s: %v", loadAverages[0], err),
+			Reason:   fmt.Sprintf("failed to parse float: %s: %v", loadAverages[2], err),
 		}
 	}
 
@@ -100,17 +98,15 @@ func getCpuUsage(
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting cpu usage percentage")
-	topCmd := exec.Command("top", "-l", "1")
-	out := bytes.Buffer{}
-	topCmd.Stdout = &out
-	if runErr := topCmd.Run(); runErr != nil {
+	res, runErr := execCMD("top", "-l", "1")
+	if runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "cpu percentage",
 			Reason:   fmt.Sprintf("failed to run command: %v", runErr),
 		}
 	}
 	var userCpu, sysCpu, idleCpu float64
-	for _, line := range strings.Split(out.String(), "\n") {
+	for _, line := range strings.Split(res, "\n") {
 		trimmedLine := strings.TrimSpace(line)
 		// CPU usage: 4.32% user, 12.97% sys, 82.70% idle
 		if !strings.HasPrefix(line, "CPU usage:") {
@@ -154,8 +150,8 @@ func getCpuUsage(
 		Sys:  float32(sysCpu),
 		Idle: float32(idleCpu),
 	}
-	logg.Debug().Msgf("successfully export CPU usage: %v", data.CPUUsage)
 	mu.Unlock()
+	logg.Debug().Msgf("successfully export CPU usage: %v", data.CPUUsage)
 	return nil
 }
 
@@ -166,10 +162,8 @@ func diskUsage(
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting disk usage")
-	topCmd := exec.Command("iostat", "-d")
-	out := bytes.Buffer{}
-	topCmd.Stdout = &out
-	if runErr := topCmd.Run(); runErr != nil {
+	res, runErr := execCMD("iostat", "-d")
+	if runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "disk usage",
 			Reason:   fmt.Sprintf("failed to run command: %v", runErr),
@@ -180,7 +174,7 @@ func diskUsage(
 	//   21.94   70  1.50
 	var kbPerTransfer, mbPerSecond float64
 	var transfersPerSecond int
-	lines := strings.Split(out.String(), "\n")
+	lines := strings.Split(res, "\n")
 	if len(lines) != 4 {
 		return &collectorerrors.ExportError{
 			FuncName: "disk usage",
@@ -222,8 +216,8 @@ func diskUsage(
 		TransfersPerSecond: transfersPerSecond,
 		MbPerSecond:        float32(mbPerSecond),
 	}
-	logg.Debug().Msgf("successfully export Disk usage: %v", data.DiskUsage)
 	mu.Unlock()
+	logg.Debug().Msgf("successfully export Disk usage: %v", data.DiskUsage)
 	return nil
 }
 
@@ -234,10 +228,8 @@ func networkTopTalkers(
 	data *datastructures.SysData,
 ) *collectorerrors.ExportError {
 	logg.Debug().Msg("start getting network top talkers")
-	topTalkerCmd := exec.Command("nettop", "-P", "-l", "1", "-J", "bytes_in,bytes_out", "-x")
-	out := bytes.Buffer{}
-	topTalkerCmd.Stdout = &out
-	if runErr := topTalkerCmd.Run(); runErr != nil {
+	res, runErr := execCMD("nettop", "-P", "-l", "1", "-J", "bytes_in,bytes_out", "-x")
+	if runErr != nil {
 		return &collectorerrors.ExportError{
 			FuncName: "network top talkers",
 			Reason:   fmt.Sprintf("failed to run command: %v", runErr),
@@ -246,7 +238,7 @@ func networkTopTalkers(
 	// 					bytes_in       bytes_out
 	//some_talker.770 		   0           44670
 	//some_talker2.775 		8905            9408
-	networkTalkersStr := strings.Split(out.String(), "\n")
+	networkTalkersStr := strings.Split(res, "\n")
 	if len(networkTalkersStr) < 1 {
 		return &collectorerrors.ExportError{
 			FuncName: "network top talkers",
@@ -312,7 +304,130 @@ func networkTopTalkers(
 		ByBytesIn:  byBytesIn,
 		ByBytesOut: networkTalkers,
 	}
-	logg.Debug().Msgf("successfully export network talkers: %d", len(data.NetworkTalkers.ByBytesOut))
 	mu.Unlock()
+	logg.Debug().Msgf("successfully export network talkers: %d", len(data.NetworkTalkers.ByBytesOut))
+	return nil
+}
+
+func fileSystemInfo(
+	_ context.Context,
+	mu *sync.Mutex,
+	logg *logger.Logger,
+	data *datastructures.SysData,
+) *collectorerrors.ExportError {
+	logg.Debug().Msg("start getting fileSystem info")
+	res, runErr := execCMD("df")
+	if runErr != nil {
+		return &collectorerrors.ExportError{
+			FuncName: "file system info",
+			Reason:   fmt.Sprintf("failed to run command: %v", runErr),
+		}
+	}
+	// Filesystem                                            512-blocks      Used Available Capacity iused      ifree %iused  Mounted on
+	// /dev/disk3s1s1                                         965595304  30093160 377103368     8%  502068 1885516840    0%   /
+	// devfs                                                        423       423         0   100%     732          0  100%   /dev
+	outputStrs := strings.Split(res, "\n")
+	if len(outputStrs) < 1 {
+		return &collectorerrors.ExportError{
+			FuncName: "file system info",
+			Reason:   "failed to parse command output expect at least one line",
+		}
+	}
+	fileSystems := make([]datastructures.FileSystem, 0, len(outputStrs)-1)
+	for _, line := range outputStrs[1:] {
+		if line == "" {
+			continue
+		}
+		stats := fileSystemInfoRegexp.FindStringSubmatch(strings.TrimSpace(line))
+		if len(stats) != 10 {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse line expect 10 arguments got %d", len(stats)),
+			}
+		}
+		filesystem := stats[1]
+
+		blocksCount, err := strconv.Atoi(stats[2])
+		if err != nil {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse blocks size to int: %v", err),
+			}
+		}
+		bytesSize := blocksCount * 512
+
+		blocksUsed, err := strconv.Atoi(stats[3])
+		if err != nil {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse used blocks to int: %v", err),
+			}
+		}
+		bytesUsed := blocksUsed * 512
+
+		blockAvail, err := strconv.Atoi(stats[4])
+		if err != nil {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse abailable blocks to int: %v", err),
+			}
+		}
+		bytesAvalilable := blockAvail * 512
+
+		var capacityPercent float32 = 100.0
+		if blocksCount != 0 {
+			capacityPercent = float32(blocksUsed) / float32(blocksCount) * 100
+		}
+
+		inodeUsed, err := strconv.Atoi(stats[6])
+		if err != nil {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse used inodes to int: %v", err),
+			}
+		}
+
+		inodeFree, err := strconv.Atoi(stats[7])
+		if err != nil {
+			return &collectorerrors.ExportError{
+				FuncName: "file system info",
+				Reason:   fmt.Sprintf("failed to parse used inodes to int: %v", err),
+			}
+		}
+
+		var inodeUsedPercent float32 = 100.0
+		if inodeUsed+inodeFree != 0 {
+			inodeUsedPercent = float32(inodeUsed) / float32(inodeUsed+inodeFree) * 100
+		}
+
+		mountedOn := stats[9]
+
+		fileSystems = append(fileSystems, datastructures.FileSystem{
+			FileSystem: filesystem,
+			MemoryInfo: datastructures.FileSystemMemoryInfo{
+				SizeBytes:       bytesSize,
+				UsedBytes:       bytesUsed,
+				AvailableBytes:  bytesAvalilable,
+				CapacityPercent: capacityPercent,
+			},
+			InodeInfo: datastructures.FileSystemInodeInfo{
+				InodeFree:        inodeFree,
+				InodeUsed:        inodeUsed,
+				InodeUsedPercent: inodeUsedPercent,
+			},
+			MountedOn: mountedOn,
+		})
+	}
+
+	sort.Slice(fileSystems, func(i, j int) bool {
+		return fileSystems[i].MemoryInfo.SizeBytes > fileSystems[j].MemoryInfo.SizeBytes
+	})
+
+	mu.Lock()
+	data.FileSystemInfo = &datastructures.FileSystemInfo{
+		FileSystems: fileSystems,
+	}
+	mu.Unlock()
+	logg.Debug().Msgf("successfully export filesystem info: %d", len(data.FileSystemInfo.FileSystems))
 	return nil
 }

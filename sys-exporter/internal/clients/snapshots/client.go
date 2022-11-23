@@ -47,6 +47,7 @@ func New(ctx context.Context, logg *logger.Logger, cfg config.SnapshotsSection) 
 			CPUUsage:       &datastructures.CPUUsage{},
 			DiskUsage:      &datastructures.DiskUsage{},
 			NetworkTalkers: &datastructures.NetworkTopTalkers{},
+			FileSystemInfo: &datastructures.FileSystemInfo{},
 		},
 		countOfSysData: 0,
 
@@ -80,6 +81,9 @@ func (s *Snapshots) Push(ctx context.Context, data *datastructures.SysData) {
 	}
 	if data.NetworkTalkers != nil {
 		s.totalSysData.NetworkTalkers = data.NetworkTalkers
+	}
+	if data.FileSystemInfo != nil {
+		s.totalSysData.FileSystemInfo = data.FileSystemInfo
 	}
 	s.countOfSysData++
 	s.mu.Unlock()
@@ -134,6 +138,7 @@ func (s *Snapshots) calculateSnapshot() (*datastructures.SysData, error) {
 		},
 		DiskUsage:      s.totalSysData.DiskUsage,
 		NetworkTalkers: s.totalSysData.NetworkTalkers,
+		FileSystemInfo: s.totalSysData.FileSystemInfo,
 	}
 	s.totalSysData = &datastructures.SysData{
 		LoadAverage:    &datastructures.LoadAverage{},

@@ -1,4 +1,4 @@
-package memorystorage
+package diskstorage
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	filesystemmocks "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/memorystorage/mocks"
+	filesystemmocks "github.com/hihoak/otus-course-hws/sys-exporter/internal/clients/storage/diskstorage/mocks"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/sys-exporter/internal/pkg/logger"
 	"github.com/stretchr/testify/require"
@@ -49,7 +49,7 @@ func Test_createNewFile(t *testing.T) {
 		).Times(1).Return(resFile, nil)
 
 		storage, err := New(
-			config.MemoryStorageSection{SnapshotsStoragePath: testSnapshotsStoragePath},
+			config.DiskStorageSection{SnapshotsStoragePath: testSnapshotsStoragePath},
 			logg,
 			mockFileSystem,
 		)
@@ -87,7 +87,7 @@ func TestMemoryStorage_Save(t *testing.T) {
 		mockFileSystem.EXPECT().OpenFile(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(resFile, nil)
 
 		storage, err := New(
-			config.MemoryStorageSection{
+			config.DiskStorageSection{
 				SnapshotsStoragePath:      testSnapshotsStoragePath,
 				MaximumSizeOfSnapshotFile: int64(testSnapshotMaxSize),
 			},

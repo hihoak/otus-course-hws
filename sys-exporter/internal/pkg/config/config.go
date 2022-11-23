@@ -29,6 +29,7 @@ type DisableMetrics struct {
 	CPUUsage          bool `default:"false" env:"CPU_USAGE" json:"cpuUsage"`
 	DiskUsage         bool `default:"false" env:"DISK_USAGE" json:"diskUsage"`
 	NetworkTopTalkers bool `default:"false" env:"NETWORK_TOP_TALKERS" json:"networkTopTalkers"`
+	FileSystemInfo    bool `default:"false" env:"FILE_SYSTEM_INFO" json:"fileSystemInfo"`
 }
 
 type SnapshotsSection struct {
@@ -42,7 +43,7 @@ type LoggerSection struct {
 	LogLevel string `default:"info" env:"LOG_LEVEL"`
 }
 
-type MemoryStorageSection struct {
+type DiskStorageSection struct {
 	// path where exporter will be store snapshots files
 	SnapshotsStoragePath string `default:"/tmp/sys-exporter" env:"SNAPSHOTS_STORAGE_PATH"`
 	// maximum size of snapshot file in bytes, when new will be created
@@ -54,12 +55,12 @@ type ServerSection struct {
 }
 
 type Config struct {
-	Logger        LoggerSection
-	Exporter      ExporterSection
-	MemoryStorage MemoryStorageSection
-	Snapshots     SnapshotsSection
-	Server        ServerSection
-	Collector     CollectorSection
+	Logger      LoggerSection
+	Exporter    ExporterSection
+	DiskStorage DiskStorageSection
+	Snapshots   SnapshotsSection
+	Server      ServerSection
+	Collector   CollectorSection
 }
 
 func New(configPath string) *Config {

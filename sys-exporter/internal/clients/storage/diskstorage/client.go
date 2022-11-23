@@ -1,6 +1,6 @@
-// package memorystorage
-// implements storage in a memory
-package memorystorage
+// package diskstorage
+// implements storage into disk
+package diskstorage
 
 import (
 	"context"
@@ -32,7 +32,7 @@ type DiskStorage struct {
 	logg *logger.Logger
 }
 
-func New(cfg config.MemoryStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*DiskStorage, error) {
+func New(cfg config.DiskStorageSection, logg *logger.Logger, fileSystem FileSystemer) (*DiskStorage, error) {
 	if err := fileSystem.MkdirAll(cfg.SnapshotsStoragePath, 0o777); err != nil {
 		return nil, errors.Wrap(err, "failed to create directory with snapshots")
 	}

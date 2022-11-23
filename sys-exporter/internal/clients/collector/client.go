@@ -53,6 +53,14 @@ func New(cfg config.CollectorSection, logg *logger.Logger) *Collector {
 			metricFunctions[collectorfuntions.NetworkTopTalkers] = f
 		}
 	}
+	if !cfg.DisableMetrics.FileSystemInfo {
+		if f, ok := collectorfuntions.ExporterFunctions[collectorfuntions.FileSystemInfo]; !ok {
+			logg.Warn().Msgf("Collector: file system info metric is not supported yet")
+		} else {
+			logg.Debug().Msgf("Collector: will collect file system info")
+			metricFunctions[collectorfuntions.FileSystemInfo] = f
+		}
+	}
 
 	return &Collector{
 		logg: logg,
@@ -67,7 +75,7 @@ func (c *Collector) Export(ctx context.Context, timeNow time.Time) (*datastructu
 		TimeNow: timeNow,
 	}
 
-	var multiError collectorerrors.MultiError
+	multiError := collectorerrors.NewMultiError()
 	wg := sync.WaitGroup{}
 	mu := &sync.Mutex{}
 	wg.Add(len(c.metricFunctions))
@@ -88,7 +96,7 @@ func (c *Collector) Export(ctx context.Context, timeNow time.Time) (*datastructu
 	}
 	wg.Wait()
 
-	if multiError.Error() != "" {
+	if multiError.Len() != 0 {
 		return data, errors.Wrap(multiError, "failed to get full information. Some methods returns error")
 	}
 	c.logg.Debug().Msg("all information successfully exported!")

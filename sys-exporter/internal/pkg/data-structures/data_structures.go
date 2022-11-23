@@ -1,6 +1,8 @@
 package datastructures
 
-import "time"
+import (
+	"time"
+)
 
 type LoadAverage struct {
 	CPUPercentUsage float32
@@ -33,10 +35,35 @@ type NetworkTopTalkers struct {
 	ByBytesOut []*NetworkTalker
 }
 
+type FileSystemMemoryInfo struct {
+	SizeBytes       int
+	UsedBytes       int
+	AvailableBytes  int
+	CapacityPercent float32
+}
+
+type FileSystemInodeInfo struct {
+	InodeUsed        int
+	InodeFree        int
+	InodeUsedPercent float32
+}
+
+type FileSystem struct {
+	FileSystem string
+	MemoryInfo FileSystemMemoryInfo
+	InodeInfo  FileSystemInodeInfo
+	MountedOn  string
+}
+
+type FileSystemInfo struct {
+	FileSystems []FileSystem
+}
+
 type SysData struct {
 	TimeNow        time.Time
 	LoadAverage    *LoadAverage
 	CPUUsage       *CPUUsage
 	DiskUsage      *DiskUsage
 	NetworkTalkers *NetworkTopTalkers
+	FileSystemInfo *FileSystemInfo
 }
