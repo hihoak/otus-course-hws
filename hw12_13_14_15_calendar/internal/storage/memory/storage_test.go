@@ -57,7 +57,11 @@ func compareSlices(expected []*storage.Event, actual []*storage.Event) bool {
 func TestStorage(t *testing.T) {
 	t.Run("test storage - ADD", func(t *testing.T) {
 		st := New(logger.New("debug"))
-		err := st.AddEvent(context.Background(), testTitle, time.Now(), time.Now())
+		timeNow := time.Now()
+		err := st.AddEvent(context.Background(), &storage.Event{
+			Title:     testTitle,
+			StartDate: &timeNow,
+		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(st.data))
 		events := getAllEvents(st.data)
