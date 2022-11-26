@@ -7,7 +7,6 @@ import (
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/sequencer"
-	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -61,14 +60,14 @@ func (c *Client) Connect() error {
 	conn, err := amqp.DialConfig(c.rabbitURL, c.config)
 	if err != nil {
 		c.log.Error().Err(err).Msgf("failed connect to %s", c.rabbitURL)
-		return errors.Wrap(err, fmt.Sprintf("failed connect to %s", c.rabbitURL))
+		return fmt.Errorf("failed connect to %s: %w", c.rabbitURL, err)
 	}
 	c.log.Info().Msgf("successfully connected to %s", c.rabbitURL)
 	c.connection = conn
 	c.log.Info().Msg("making a connection channel...")
 	channel, err := c.connection.Channel()
 	if err != nil {
-		return errors.Wrap(err, "failed to establish channel")
+		return fmt.Errorf("failed to establish channel: %w", err)
 	}
 	defer func() {
 		if closeErr := channel.Close(); closeErr != nil {
@@ -82,7 +81,7 @@ func (c *Client) Connect() error {
 			exchangeName, amqp.ExchangeDirect,
 			true, false,
 			false, true, nil); exchangeErr != nil {
-			return errors.Wrap(exchangeErr, "failed to declare exchange")
+			return fmt.Errorf("failed to declare exchange: %w", exchangeErr)
 		}
 	}
 
@@ -91,15 +90,14 @@ func (c *Client) Connect() error {
 			queueName, true,
 			false, false,
 			true, nil); queueErr != nil {
-			return errors.Wrap(queueErr, "failed to declare queue")
+			return fmt.Errorf("failed to declare queue: %w", queueErr)
 		}
 	}
 
 	for _, binding := range c.bindings {
 		if bindErr := channel.QueueBind(binding.QueueName, binding.Key, binding.ExchangeName, false, nil); bindErr != nil {
-			return errors.Wrap(bindErr,
-				fmt.Sprintf("failed to bind exchange '%s' "+
-					"and queue '%s'", binding.ExchangeName, binding.QueueName))
+			return fmt.Errorf("failed to bind exchange '%s' and queue '%s': %w",
+				binding.ExchangeName, binding.QueueName, bindErr)
 		}
 	}
 
@@ -110,7 +108,7 @@ func (c *Client) Close() error {
 	c.log.Info().Msgf("start closing connection to rabbit %s", c.connection.RemoteAddr())
 	if err := c.connection.Close(); err != nil {
 		c.log.Error().Err(err).Msgf("failed to close connection with rabbit")
-		return errors.Wrap(err, "failed to close connection with rabbit")
+		return fmt.Errorf("failed to close connection with rabbit: %w", err)
 	}
 	c.log.Info().Msgf("successfully close connection with rabbit %s", c.connection.RemoteAddr())
 	return nil
@@ -127,7 +125,7 @@ func (c *Client) Push(ctx context.Context, exchange string, message []byte) erro
 	}()
 	channel, err := c.connection.Channel()
 	if err != nil {
-		return errors.Wrap(err, "failed to open channel to send message")
+		return fmt.Errorf("failed to open channel to send message: %w", err)
 	}
 	defer func() {
 		if closeErr := channel.Close(); closeErr != nil {
@@ -138,10 +136,8 @@ func (c *Client) Push(ctx context.Context, exchange string, message []byte) erro
 		Body: message,
 	})
 	if err != nil {
-		return errors.Wrap(err,
-			fmt.Sprintf("failed to deliver "+
-				"a message '%s' to exchange '%s' with key '%s'",
-				message, exchange, exchange))
+		return fmt.Errorf("failed to deliver a message '%s' to exchange '%s' with key '%s': %w",
+			message, exchange, exchange, err)
 	}
 	c.log.Debug().Msgf("successfully published message"+
 		" message '%s' to exchange '%s' with key '%s'",
@@ -156,12 +152,12 @@ func (c Client) Pull(ctx context.Context, queue string) (<-chan string, error) {
 	}
 	channel, err := c.connection.Channel()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to start connection")
+		return nil, fmt.Errorf("failed to start connection: %w", err)
 	}
 
 	ch, err := channel.Consume(queue, "calendar-sender", true, false, false, false, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to start consuming")
+		return nil, fmt.Errorf("failed to start consuming: %w", err)
 	}
 
 	messages := make(chan string)

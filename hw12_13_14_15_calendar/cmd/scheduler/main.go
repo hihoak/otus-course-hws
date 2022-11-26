@@ -6,13 +6,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/scheduler"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/sequencer/rabbit"
 	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
+	_ "github.com/lib/pq"
 )
 
 var configFile string
@@ -35,7 +35,7 @@ func main() {
 	}
 	logg := logger.New(cfg.Logger.Level)
 	logg.Info().Msg("Start initializing scheduler. Initialize connection to DB...")
-	var st app.Storage
+	var st scheduler.Storage
 	if cfg.UseInMemoryStorage {
 		st = memorystorage.New(logg)
 	} else {

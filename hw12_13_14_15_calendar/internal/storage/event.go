@@ -12,4 +12,5 @@ type Event struct {
 	NotifyDate  *time.Time `db:"notify_date"`
 
 	ScheduledToNotify bool `db:"scheduled_to_notify"`
+	IsSent            bool `db:"is_sent"`
 }

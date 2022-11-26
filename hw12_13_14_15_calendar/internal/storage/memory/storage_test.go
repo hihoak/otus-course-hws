@@ -3,6 +3,7 @@ package memorystorage
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -56,7 +57,7 @@ func compareSlices(expected []*storage.Event, actual []*storage.Event) bool {
 func TestStorage(t *testing.T) {
 	t.Run("test storage - ADD", func(t *testing.T) {
 		st := New(logger.New("debug"))
-		err := st.AddEvent(context.Background(), testTitle)
+		err := st.AddEvent(context.Background(), testTitle, time.Now(), time.Now())
 		require.NoError(t, err)
 		require.Equal(t, 1, len(st.data))
 		events := getAllEvents(st.data)

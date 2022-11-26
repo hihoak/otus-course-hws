@@ -37,7 +37,7 @@ func (s *Storage) Close(ctx context.Context) error {
 	return nil
 }
 
-func (s *Storage) AddEvent(ctx context.Context, title string) error {
+func (s *Storage) AddEvent(ctx context.Context, title string, notifyDate, timeNow time.Time) error {
 	event := &storage.Event{
 		Title: title,
 	}
@@ -91,7 +91,7 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 func (s *Storage) ListEventsToNotify(
 	ctx context.Context,
 	fromTime time.Time,
-	period time.Duration,
+	countOfEvents int,
 ) ([]*storage.Event, error) {
 	return nil, nil
 }
@@ -102,4 +102,8 @@ func (s *Storage) DeleteOldEventsBeforeTime(
 	maxLiveTime time.Duration,
 ) ([]*storage.Event, error) {
 	return nil, nil
+}
+
+func (s *Storage) SetSentStatusToEvents(ctx context.Context, ids []string) error {
+	return nil
 }

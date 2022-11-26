@@ -9,19 +9,10 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
-	"github.com/pkg/errors"
 )
 
-type IScheduler interface {
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
-
-	CleanOldEvents(ctx context.Context) error
-	ProduceNotifications(ctx context.Context) error
-}
-
 type Storage interface {
-	ListEventsToNotify(ctx context.Context, fromTime time.Time, period time.Duration) ([]*storage.Event, error)
+	ListEventsToNotify(ctx context.Context, fromTime time.Time, countOfEvents int) ([]*storage.Event, error)
 	DeleteOldEventsBeforeTime(ctx context.Context,
 		fromTime time.Time, maxLiveTime time.Duration) ([]*storage.Event, error)
 }
@@ -31,7 +22,6 @@ type Sequence interface {
 }
 
 type Scheduler struct {
-	IScheduler
 	storage  Storage
 	sequence Sequence
 
@@ -68,21 +58,21 @@ func NewSchedulerImpl(
 	}
 }
 
-func (s *Scheduler) CleanOldEvents(ctx context.Context) error {
+func (s *Scheduler) cleanOldEvents(ctx context.Context) error {
 	s.log.Info().Msg("start deleting old events...")
 	events, err := s.storage.DeleteOldEventsBeforeTime(ctx, time.Now().Local(), s.eventsDeprecationAge)
 	if err != nil {
-		return errors.Wrap(err, "failed to clean old events")
+		return fmt.Errorf("failed to clean old events: %w", err)
 	}
 	s.log.Info().Msgf("successfully clean old events total: '%d'", len(events))
 	return nil
 }
 
-func (s *Scheduler) ProduceNotifications(ctx context.Context) error {
+func (s *Scheduler) produceNotifications(ctx context.Context) error {
 	s.log.Info().Msg("start sending notifications about coming events...")
-	events, err := s.storage.ListEventsToNotify(ctx, time.Now().Local(), s.notifyPeriod)
+	events, err := s.storage.ListEventsToNotify(ctx, time.Now().Local(), 2000)
 	if err != nil {
-		return errors.Wrap(err, "failed to get events to notify")
+		return fmt.Errorf("failed to get events to notify: %w", err)
 	}
 	s.log.Info().Msgf("successfully got events to notify total: '%d'. Now start produce it in a sequence", len(events))
 	var multiError error
@@ -100,12 +90,12 @@ func (s *Scheduler) sendEvent(ctx context.Context, event *storage.Event) error {
 	notification := FromEventToNotification(event)
 	message, marshallErr := json.Marshal(notification)
 	if marshallErr != nil {
-		return errors.Wrap(marshallErr, "something goes wrong when trying to marshall notification")
+		return fmt.Errorf("something goes wrong when trying to marshall notification: %w", marshallErr)
 	}
 	err := s.sequence.Push(ctx, s.exchangeToSendNotifications, message)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to push notification %s to channle %s",
-			s.exchangeToSendNotifications, message))
+		return fmt.Errorf("failed to push notification %s to channle %s: %w",
+			s.exchangeToSendNotifications, message, err)
 	}
 
 	s.log.Debug().Msgf("successfully send message %s to channel %s",
@@ -125,19 +115,19 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			// TODO: add support to trigger by a signal
 		}
 
-		if err := s.CleanOldEvents(ctx); err != nil {
+		if err := s.cleanOldEvents(ctx); err != nil {
 			s.log.Error().Err(err).Msgf("failed to clean old events")
 			return err
 		}
 
-		if err := s.ProduceNotifications(ctx); err != nil {
+		if err := s.produceNotifications(ctx); err != nil {
 			s.log.Error().Err(err).Msgf("failed to produce notifications")
 			return err
 		}
 	}
 }
 
-func (s *Scheduler) Stop(ctx context.Context) error {
+func (s *Scheduler) Stop(_ context.Context) error {
 	s.log.Info().Msg("Stopping scheduler work...")
 	close(s.doneChan)
 	return nil

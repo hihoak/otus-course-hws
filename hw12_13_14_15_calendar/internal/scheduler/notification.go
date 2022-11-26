@@ -7,7 +7,7 @@ import (
 )
 
 type Notification struct {
-	EventID        string     `db:"event_id"`
+	EventID        string     `json:"eventId" db:"event_id"`
 	EventTitle     string     `db:"event_title"`
 	EventStartDate *time.Time `db:"event_start_date"`
 	SendToUserID   string     `db:"send_to_user_id"`

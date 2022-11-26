@@ -13,7 +13,6 @@ require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.32.1
 	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/rs/xid v1.4.0
