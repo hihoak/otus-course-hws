@@ -124,9 +124,8 @@ func (s *Storage) DeleteOldEventsBeforeTime(
 func (s *Storage) SetSentStatusToEvents(_ context.Context, ids []string) error {
 	s.log.Debug().Msg("Start set statuses to events")
 	for _, id := range ids {
-		event, ok := s.data[id]
-		if ok {
-			event.IsSent = true
+		if _, ok := s.data[id]; ok {
+			s.data[id].IsSent = true
 		}
 	}
 	s.log.Debug().Msgf("Successfully set sent statuses to events")
