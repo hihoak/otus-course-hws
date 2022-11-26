@@ -14,7 +14,7 @@ type Storager interface {
 }
 
 type Sequence interface {
-	Pull(ctx context.Context, queue string) (<-chan string, error)
+	Pull(ctx context.Context, queue string) (<-chan []byte, error)
 }
 
 type Sender struct {
@@ -81,7 +81,7 @@ func (s *Sender) send(ctx context.Context) error {
 				return nil
 			}
 			notification := &Notification{}
-			if marshErr := json.Unmarshal([]byte(msg), &notification); marshErr != nil {
+			if marshErr := json.Unmarshal(msg, &notification); marshErr != nil {
 				s.log.Error().Err(marshErr).Msgf("Sender: failed to unmarshall to notification: %s", msg)
 				continue
 			}

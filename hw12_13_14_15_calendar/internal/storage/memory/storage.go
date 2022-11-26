@@ -93,17 +93,42 @@ func (s *Storage) ListEventsToNotify(
 	fromTime time.Time,
 	countOfEvents int,
 ) ([]*storage.Event, error) {
-	return nil, nil
+	s.log.Debug().Msg("Start list events to notify")
+	res := make([]*storage.Event, 0, countOfEvents)
+	for _, event := range s.data {
+		if !event.ScheduledToNotify && !event.IsSent && event.NotifyDate.Before(fromTime) {
+			res = append(res, event)
+		}
+	}
+	s.log.Debug().Msgf("Got '%d' events to notify", len(res))
+	return res, nil
 }
 
 func (s *Storage) DeleteOldEventsBeforeTime(
-	ctx context.Context,
+	_ context.Context,
 	fromTime time.Time,
 	maxLiveTime time.Duration,
-) ([]*storage.Event, error) {
-	return nil, nil
+) error {
+	s.log.Debug().Msg("Start delete old events")
+	for key, event := range s.data {
+		if !event.EndDate.Before(fromTime.Add(-maxLiveTime)) {
+			s.mu.Lock()
+			delete(s.data, key)
+			s.mu.Unlock()
+		}
+	}
+	s.log.Debug().Msgf("Successfully delete old events")
+	return nil
 }
 
-func (s *Storage) SetSentStatusToEvents(ctx context.Context, ids []string) error {
+func (s *Storage) SetSentStatusToEvents(_ context.Context, ids []string) error {
+	s.log.Debug().Msg("Start set statuses to events")
+	for _, id := range ids {
+		event, ok := s.data[id]
+		if ok {
+			event.IsSent = true
+		}
+	}
+	s.log.Debug().Msgf("Successfully set sent statuses to events")
 	return nil
 }

@@ -67,7 +67,7 @@ func main() {
 	}()
 
 	sch := scheduler.NewSchedulerImpl(logg, st,
-		rabb, cfg.Scheduler.ScanPeriod,
+		rabb, cfg.Scheduler.ScanPeriod, cfg.Scheduler.CleanPeriod,
 		time.Hour*24*time.Duration(cfg.Scheduler.EventsDeprecationAgeInDays),
 		cfg.Scheduler.NotifyPeriod, cfg.Scheduler.ExchangeToNotifyEvents)
 

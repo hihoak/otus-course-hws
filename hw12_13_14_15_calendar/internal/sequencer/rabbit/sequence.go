@@ -114,8 +114,8 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) Push(ctx context.Context, exchange string, message []byte) error {
-	c.log.Debug().Msgf("start sending message '%s' to exchange '%s'", message, exchange)
+func (c *Client) Push(ctx context.Context, exchange string, messages [][]byte) error {
+	c.log.Debug().Msgf("start sending messages %d to exchange '%s'", len(messages), exchange)
 	if _, ok := c.exchanges[exchange]; !ok {
 		return fmt.Errorf("exchange '%s' doesn't exists", exchange)
 	}
@@ -132,20 +132,22 @@ func (c *Client) Push(ctx context.Context, exchange string, message []byte) erro
 			c.log.Error().Err(err).Msg("failed to close channel")
 		}
 	}()
-	err = channel.PublishWithContext(ctx, exchange, calendarKey, false, false, amqp.Publishing{
-		Body: message,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to deliver a message '%s' to exchange '%s' with key '%s': %w",
-			message, exchange, exchange, err)
+	for _, message := range messages {
+		err = channel.PublishWithContext(ctx, exchange, calendarKey, false, false, amqp.Publishing{
+			Body: message,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to deliver a message '%s' to exchange '%s' with key '%s': %w",
+				message, exchange, exchange, err)
+		}
+		c.log.Debug().Msgf("successfully published message"+
+			" message '%s' to exchange '%s' with key '%s'",
+			message, exchange, exchange)
 	}
-	c.log.Debug().Msgf("successfully published message"+
-		" message '%s' to exchange '%s' with key '%s'",
-		message, exchange, exchange)
 	return nil
 }
 
-func (c Client) Pull(ctx context.Context, queue string) (<-chan string, error) {
+func (c Client) Pull(ctx context.Context, queue string) (<-chan []byte, error) {
 	c.log.Debug().Msgf("start consuming from queue '%s'", queue)
 	if _, ok := c.queues[queue]; !ok {
 		return nil, fmt.Errorf("queue '%s' doesn't exists", queue)
@@ -160,11 +162,11 @@ func (c Client) Pull(ctx context.Context, queue string) (<-chan string, error) {
 		return nil, fmt.Errorf("failed to start consuming: %w", err)
 	}
 
-	messages := make(chan string)
+	messages := make(chan []byte)
 	go func() {
 		for msg := range ch {
 			c.log.Debug().Msgf("got a message from '%s': %s", queue, msg.Body)
-			messages <- string(msg.Body)
+			messages <- msg.Body
 		}
 		c.log.Debug().Msg("stop consuming")
 	}()

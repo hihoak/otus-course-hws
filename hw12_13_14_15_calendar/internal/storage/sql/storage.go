@@ -245,24 +245,25 @@ func (s *Storage) DeleteOldEventsBeforeTime(
 	ctx context.Context,
 	fromTime time.Time,
 	maxLiveTime time.Duration,
-) ([]*storage.Event, error) {
+) error {
 	s.log.Debug().Msg("DeleteOldEventsBeforeTime: start deleting old events")
 	query := strings.Builder{}
 	query.WriteString("DELETE FROM events ")
-	query.WriteString(fmt.Sprintf("WHERE '%s' - end_date > '%s' RETURNING *;",
+	query.WriteString(fmt.Sprintf("WHERE '%s' - end_date > '%s'",
 		s.timeToSQLTimeWithTimezone(fromTime),
 		s.durationToSQLInterval(maxLiveTime)))
 	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: deleting with query: %s", query.String())
 	rows, err := s.db.QueryxContext(ctx, query.String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete old events with query: %s: %w", query.String(), err)
+		return fmt.Errorf("failed to delete old events with query: %s: %w", query.String(), err)
 	}
-	events, err := s.fromSQLRowsToEvents(rows)
-	if err != nil {
-		return nil, fmt.Errorf("ListEventsToNotify - failed to scan events from rows: %w", err)
-	}
-	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete '%d' old events", len(events))
-	return events, nil
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			s.log.Error().Err(closeErr).Msg("DeleteOldEventsBeforeTime: failed to close rows")
+		}
+	}()
+	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete old events")
+	return nil
 }
 
 func (s *Storage) rollbackOrCommit(tx *sqlx.Tx, err error) {

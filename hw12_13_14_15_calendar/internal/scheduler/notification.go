@@ -13,7 +13,15 @@ type Notification struct {
 	SendToUserID   string     `db:"send_to_user_id"`
 }
 
-func FromEventToNotification(event *storage.Event) *Notification {
+func fromEventsToNotifications(events []*storage.Event) []*Notification {
+	res := make([]*Notification, len(events))
+	for idx, event := range events {
+		res[idx] = fromEventToNotification(event)
+	}
+	return res
+}
+
+func fromEventToNotification(event *storage.Event) *Notification {
 	return &Notification{
 		EventID:        event.ID,
 		EventTitle:     event.Title,
