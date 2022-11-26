@@ -7,13 +7,21 @@ import (
 )
 
 type Notification struct {
-	EventID        string     `db:"event_id"`
+	EventID        string     `json:"eventId" db:"event_id"`
 	EventTitle     string     `db:"event_title"`
 	EventStartDate *time.Time `db:"event_start_date"`
 	SendToUserID   string     `db:"send_to_user_id"`
 }
 
-func FromEventToNotification(event *storage.Event) *Notification {
+func fromEventsToNotifications(events []*storage.Event) []*Notification {
+	res := make([]*Notification, len(events))
+	for idx, event := range events {
+		res[idx] = fromEventToNotification(event)
+	}
+	return res
+}
+
+func fromEventToNotification(event *storage.Event) *Notification {
 	return &Notification{
 		EventID:        event.ID,
 		EventTitle:     event.Title,

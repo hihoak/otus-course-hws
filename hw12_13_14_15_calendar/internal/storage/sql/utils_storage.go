@@ -7,7 +7,6 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 func (s *Storage) durationToSQLInterval(d time.Duration) string {
@@ -28,7 +27,7 @@ func (s *Storage) fromSQLRowsToEvents(rows *sqlx.Rows) ([]*storage.Event, error)
 	for rows.Next() {
 		var event storage.Event
 		if scanErr := rows.StructScan(&event); scanErr != nil {
-			return nil, errors.Wrap(errs.ErrListEventsToNotify, scanErr.Error())
+			return nil, fmt.Errorf("%s: %w", scanErr.Error(), errs.ErrListEventsToNotify)
 		}
 		events = append(events, &event)
 	}

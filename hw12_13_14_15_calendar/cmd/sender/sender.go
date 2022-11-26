@@ -9,6 +9,9 @@ import (
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/sender"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/sequencer/rabbit"
+	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
+	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -43,7 +46,28 @@ func main() {
 		}
 	}()
 
-	sndr := sender.NewSender(ctx, logg, rabb, cfg.Sender.QueueToPullNotifications)
+	logg.Info().Msg("Initialize connection to DB...")
+	var st sender.Storager
+	if cfg.UseInMemoryStorage {
+		st = memorystorage.New(logg)
+	} else {
+		sqlSt := sqlstorage.New(
+			logg, cfg.Database.Host, cfg.Database.Port, cfg.Database.User,
+			cfg.Database.Password, cfg.Database.DBName, cfg.Database.ConnectionTimeout,
+			cfg.Database.OperationTimeout)
+		if connectionErr := sqlSt.Connect(ctx); connectionErr != nil {
+			logg.Fatal().Err(connectionErr).Msg("failed to connect to database")
+		}
+		defer func() {
+			if closeErr := sqlSt.Close(ctx); closeErr != nil {
+				logg.Error().Err(closeErr).Msg("failed to close connection to database")
+			}
+		}()
+		st = sqlSt
+	}
+	logg.Info().Msg("Successfully connected to DB. Start connection to sequence...")
+
+	sndr := sender.NewSender(ctx, logg, rabb, st, cfg.Sender.QueueToPullNotifications)
 
 	defer func() {
 		if stopErr := sndr.Stop(ctx); stopErr != nil {

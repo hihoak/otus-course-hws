@@ -5,9 +5,11 @@ import (
 	"reflect"
 
 	programmerrors "github.com/hihoak/otus-course-hws/hw09_struct_validator/pkg/programm_errors"
+
+	"errors"
+
 	validationerrors "github.com/hihoak/otus-course-hws/hw09_struct_validator/pkg/validation_errors"
 	"github.com/hihoak/otus-course-hws/hw09_struct_validator/processor"
-	"github.com/pkg/errors"
 )
 
 var supportedKinds = []reflect.Kind{reflect.Struct}
@@ -16,9 +18,10 @@ func Validate(v interface{}) error {
 	structValue := reflect.ValueOf(v)
 
 	if structValue.Kind() != reflect.Struct {
-		return errors.Wrap(programmerrors.ErrUnsupportedKind,
-			fmt.Sprintf("validation of '%s' kind is not supported. Supported kinds is: %v",
-				structValue.Kind(), supportedKinds))
+		return fmt.Errorf("%s: %w",
+			fmt.Sprintf("validation of '%s' kind is not supported. Supported kinds is: %v:",
+				structValue.Kind(), supportedKinds),
+			programmerrors.ErrUnsupportedKind)
 	}
 
 	var errs validationerrors.ValidationErrors

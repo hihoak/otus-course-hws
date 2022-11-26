@@ -40,10 +40,11 @@ type Bind struct {
 }
 
 type SchedulerConf struct {
-	ScanPeriod                 time.Duration `config:"scheduler_scan_period"`
-	NotifyPeriod               time.Duration `config:"scheduler_notify_period"`
-	EventsDeprecationAgeInDays int64         `config:"scheduler_events_deprecation_age_in_days"`
-	ExchangeToNotifyEvents     string        `config:"scheduler_exchange_to_notify_events"`
+	ScanPeriod                 time.Duration `config:"scanperiod"`
+	CleanPeriod                time.Duration `config:"cleanperiod"`
+	NotifyPeriod               time.Duration `config:"notifyperiod"`
+	EventsDeprecationAgeInDays int64         `config:"eventsdeprecationageindays"`
+	ExchangeToNotifyEvents     string        `config:"exchangetonotifyevents"`
 }
 
 type ServerConf struct {

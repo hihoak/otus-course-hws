@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -112,7 +113,7 @@ func NewServer(
 	}
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) ListenAndServe(ctx context.Context) error {
 	s.Logg.Info().Msg("Starting server...")
 	s.Logg.Info().Msgf("Start listening TCP connections on '%s' ...", s.GRPCHost)
 	tcpListener, err := net.Listen("tcp", s.GRPCHost)
@@ -137,6 +138,7 @@ func (s *Server) Start(ctx context.Context) error {
 		grpcServerErrChan <- s.grpcServer.Serve(tcpListener)
 	}()
 
+	s.Logg.Info().Msg("calendar is running...")
 	select {
 	case <-ctx.Done():
 		s.Logg.Info().Msg("Stop server by signal")
@@ -158,10 +160,8 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *Server) Stop(ctx context.Context) {
+func (s *Server) Stop(ctx context.Context) error {
 	s.Logg.Info().Msg("Start stopping server...")
-	ctx, cancel := context.WithTimeout(ctx, s.ShutdownTimeout)
-	defer cancel()
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
@@ -178,12 +178,23 @@ func (s *Server) Stop(ctx context.Context) {
 		s.grpcServer.GracefulStop()
 		s.Logg.Info().Msg("Successfully shutdown GRPC server")
 	}()
-	defer func() {
+	go func() {
 		defer wg.Done()
 		if tcpListenerCloseErr := s.tcpListener.Close(); tcpListenerCloseErr != nil {
 			s.Logg.Error().Err(tcpListenerCloseErr).Msg("Failed to close TCP listener")
 		}
 		s.Logg.Info().Msg("Successfully shutdown TCP listener")
 	}()
-	wg.Wait()
+
+	succesfulDone := make(chan interface{})
+	go func() {
+		wg.Wait()
+		close(succesfulDone)
+	}()
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("context is done, graceful shutdown is over :(")
+	case <-succesfulDone:
+		return nil
+	}
 }

@@ -3,6 +3,7 @@ package sqlstorage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,9 +13,6 @@ import (
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
-	// needs github.com/lib/pq.
-	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -60,11 +58,11 @@ func (s *Storage) Connect(ctx context.Context) error {
 		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 			s.host, s.port, s.user, s.password, s.dbname))
 	if err != nil {
-		return errors.Wrap(errs.ErrConnectionFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrConnectionFailed)
 	}
 	err = db.PingContext(ctx)
 	if err != nil {
-		return errors.Wrap(errs.ErrPingFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrPingFailed)
 	}
 	s.db = db
 	s.log.Info().Msg("Successfully connected to database")
@@ -74,7 +72,7 @@ func (s *Storage) Connect(ctx context.Context) error {
 func (s *Storage) Close(ctx context.Context) error {
 	s.log.Info().Msg("Start closing connection to database...")
 	if err := s.db.Close(); err != nil {
-		return errors.Wrap(errs.ErrCloseConnectionFailed, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrCloseConnectionFailed)
 	}
 	s.log.Info().Msg("Successfully close connection to database")
 	return s.db.Close()
@@ -84,13 +82,18 @@ func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
 	query := `
 		INSERT INTO events (id, title, start_date, end_date, description, user_id, notify_date)
         VALUES (:id, :title, :start_date, :end_date, :description, :user_id, :notify_date)`
+
+	dontSend := event.NotifyDate.Before(*event.StartDate)
+	event.IsSent = dontSend
+	event.ScheduledToNotify = dontSend
+
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errors.Wrap(errs.ErrAddEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrAddEvent)
 	}
 	s.log.Debug().Msgf("Successfully add event with id %s", event.ID)
 	return err
@@ -106,7 +109,7 @@ func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return errors.Wrap(errs.ErrUpdateEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUpdateEvent)
 	}
 	s.log.Debug().Msgf("Successfully update event with id %s", event.ID)
 	return nil
@@ -119,7 +122,7 @@ func (s *Storage) DeleteEvent(ctx context.Context, id string) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, map[string]interface{}{"id": id})
 	if err != nil {
-		return errors.Wrap(errs.ErrDeleteEvent, err.Error())
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrDeleteEvent)
 	}
 	s.log.Debug().Msgf("Successfully deleted event with id %s", id)
 	return nil
@@ -138,9 +141,9 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	var event storage.Event
 	if err := row.StructScan(&event); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.Wrap(errs.ErrNotFoundEvent, err.Error())
+			return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrNotFoundEvent)
 		}
-		return nil, errors.Wrap(errs.ErrGetEvent, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrGetEvent)
 	}
 	s.log.Debug().Msgf("Successfully got event with id %s", id)
 	return &event, nil
@@ -156,18 +159,18 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	defer cancel()
 	rows, err := s.db.QueryxContext(ctx, query)
 	if err != nil {
-		return nil, errors.Wrap(errs.ErrListEvents, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrListEvents)
 	}
-	events, err := s.fromSQLRowsToEvents(rows)
+	events, scanErr := s.fromSQLRowsToEvents(rows)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEvents - failed to scan events from rows")
+		return nil, fmt.Errorf("%s: %w", scanErr.Error(), errs.ErrListEvents)
 	}
 	s.log.Debug().Msgf("Successfully list events")
 	return events, nil
 }
 
 func (s *Storage) ListEventsToNotify(ctx context.Context,
-	fromTime time.Time, period time.Duration,
+	fromTime time.Time, countOfEvents int,
 ) ([]*storage.Event, error) {
 	s.log.Debug().Msg("ListEventsToNotify - start method")
 	query := strings.Builder{}
@@ -175,22 +178,64 @@ func (s *Storage) ListEventsToNotify(ctx context.Context,
 	SELECT id, title, start_date, user_id
 	FROM events `)
 	sqlFromTimeStr := s.timeToSQLTimeWithTimezone(fromTime)
-	sqlToTimeStr := s.timeToSQLTimeWithTimezone(fromTime.Add(period))
 	query.WriteString(
-		fmt.Sprintf("WHERE notify_date >= '%s' AND notify_date <= '%s';",
-			sqlFromTimeStr, sqlToTimeStr))
+		fmt.Sprintf("WHERE notify_date <= '%s' and not scheduled_to_notify and not is_sent LIMIT %d;",
+			sqlFromTimeStr, countOfEvents))
 	s.log.Debug().Msgf("ListEventsToNotify - try to execute query: '%s'", query.String())
 
+	var err error
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
-	rows, err := s.db.QueryxContext(ctx, query.String())
+	selectRows, err := s.db.QueryxContext(ctx, query.String())
 	if err != nil {
-		return nil, errors.Wrap(errs.ErrListEventsToNotify, err.Error())
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrListEventsToNotify)
 	}
-	events, err := s.fromSQLRowsToEvents(rows)
+	defer func() {
+		if closeErr := selectRows.Close(); closeErr != nil {
+			s.log.Error().Err(closeErr).Msg("ListEventsToNotify: failed to close rows")
+		}
+	}()
+	events, err := s.fromSQLRowsToEvents(selectRows)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+		return nil, fmt.Errorf("ListEventsToNotify - failed to scan events from rows: %w", err)
 	}
+
+	if len(events) == 0 {
+		s.log.Debug().Msg("ListEventsToNotify: not found events")
+		return events, nil
+	}
+
+	modifyQuery := `
+	UPDATE events 
+	SET scheduled_to_notify = true
+	WHERE id in (?)
+`
+	allIDs := make([]string, len(events))
+	for idx, event := range events {
+		allIDs[idx] = event.ID
+	}
+	modifyQuery, args, err := sqlx.In(modifyQuery, allIDs)
+	if err != nil {
+		return nil, fmt.Errorf("ListEventsToNotify: failed to prepare query: %w", err)
+	}
+	modifyQuery = s.db.Rebind(modifyQuery)
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("ListEventsToNotify: failed to create transaction: %w", err)
+	}
+	defer func() {
+		s.rollbackOrCommit(tx, err)
+	}()
+	updateRows, err := tx.QueryxContext(ctx, modifyQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("ListEventsToNotify: failed to set notified status to events: %w", err)
+	}
+	defer func() {
+		if closeErr := updateRows.Close(); closeErr != nil {
+			s.log.Error().Err(closeErr).Msg("ListEventsToNotify: failed to close rows")
+		}
+	}()
 	s.log.Debug().Msgf("ListEventsToNotify: got '%d' events to notify", len(events))
 	return events, nil
 }
@@ -199,22 +244,76 @@ func (s *Storage) DeleteOldEventsBeforeTime(
 	ctx context.Context,
 	fromTime time.Time,
 	maxLiveTime time.Duration,
-) ([]*storage.Event, error) {
+) error {
 	s.log.Debug().Msg("DeleteOldEventsBeforeTime: start deleting old events")
 	query := strings.Builder{}
 	query.WriteString("DELETE FROM events ")
-	query.WriteString(fmt.Sprintf("WHERE '%s' - end_date > '%s' RETURNING *;",
+	query.WriteString(fmt.Sprintf("WHERE '%s' - end_date > '%s'",
 		s.timeToSQLTimeWithTimezone(fromTime),
 		s.durationToSQLInterval(maxLiveTime)))
 	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: deleting with query: %s", query.String())
 	rows, err := s.db.QueryxContext(ctx, query.String())
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to delete old events with query: %s", query.String()))
+		return fmt.Errorf("failed to delete old events with query: %s: %w", query.String(), err)
 	}
-	events, err := s.fromSQLRowsToEvents(rows)
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			s.log.Error().Err(closeErr).Msg("DeleteOldEventsBeforeTime: failed to close rows")
+		}
+	}()
+	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete old events")
+	return nil
+}
+
+func (s *Storage) rollbackOrCommit(tx *sqlx.Tx, err error) {
+	if err == nil {
+		if errCommit := tx.Commit(); errCommit != nil {
+			s.log.Error().Err(errCommit).Msg("ListEventsToNotify: failed to commit transaction")
+		} else {
+			s.log.Debug().Msg("ListEventsToNotify: successfully commit transaction")
+			return
+		}
+	}
+	if errRollback := tx.Rollback(); errRollback != nil {
+		s.log.Error().Err(errRollback).Msg("ListEventsToNotify: failed to rollback transaction")
+		return
+	}
+	s.log.Debug().Msg("ListEventsToNotify: successfully rollback transaction")
+}
+
+func (s *Storage) SetSentStatusToEvents(ctx context.Context, ids []string) error {
+	s.log.Debug().Msgf("SetSentStatusToEvents: start set sent statuses to ids: %v", ids)
+	if len(ids) == 0 {
+		s.log.Debug().Msg("SetSentStatusToEvents: empty ids: nothing todo")
+		return nil
+	}
+	query := `
+	UPDATE events
+	SET is_sent = true
+	WHERE id in (?)`
+
+	query, args, err := sqlx.In(query, ids)
 	if err != nil {
-		return nil, errors.Wrap(err, "ListEventsToNotify - failed to scan events from rows")
+		return fmt.Errorf("SetSentStatusToEvents: failed to prepare query: %w", err)
 	}
-	s.log.Debug().Msgf("DeleteOldEventsBeforeTime: delete '%d' old events", len(events))
-	return events, nil
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("SetSentStatusToEvents: failed to start trransaction: %w", err)
+	}
+	defer func() {
+		s.rollbackOrCommit(tx, err)
+	}()
+	rows, err := s.db.QueryxContext(ctx, s.db.Rebind(query), args...)
+	if err != nil {
+		return fmt.Errorf("SetSentStatusToEvents: failed to set sent status: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			s.log.Error().Err(closeErr).Msg("SetSentStatusToEvents: failed to close rows")
+		}
+	}()
+
+	s.log.Debug().Msgf("SetSentStatusToEvents: successfully set sent status to all ids!!!")
+	return nil
 }

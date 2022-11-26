@@ -10,7 +10,6 @@ import (
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	errs "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
-	"github.com/pkg/errors"
 	"github.com/rs/xid"
 )
 
@@ -70,7 +69,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 	s.log.Debug().Msgf("Start getting event with id %s", id)
 	event, ok := s.data[id]
 	if !ok {
-		return nil, errors.Wrap(errs.ErrNotFoundEvent, fmt.Sprintf("Can't find event with id %s", id))
+		return nil, fmt.Errorf("can't find event with id %s: %w", id, errs.ErrNotFoundEvent)
 	}
 	s.log.Debug().Msgf("Successfully find event with id %s", id)
 	return event, nil
@@ -89,15 +88,43 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 func (s *Storage) ListEventsToNotify(
 	ctx context.Context,
 	fromTime time.Time,
-	period time.Duration,
+	countOfEvents int,
 ) ([]*storage.Event, error) {
-	return nil, nil
+	s.log.Debug().Msg("Start list events to notify")
+	res := make([]*storage.Event, 0, countOfEvents)
+	for _, event := range s.data {
+		if !event.ScheduledToNotify && !event.IsSent && event.NotifyDate.Before(fromTime) {
+			res = append(res, event)
+		}
+	}
+	s.log.Debug().Msgf("Got '%d' events to notify", len(res))
+	return res, nil
 }
 
 func (s *Storage) DeleteOldEventsBeforeTime(
-	ctx context.Context,
+	_ context.Context,
 	fromTime time.Time,
 	maxLiveTime time.Duration,
-) ([]*storage.Event, error) {
-	return nil, nil
+) error {
+	s.log.Debug().Msg("Start delete old events")
+	for key, event := range s.data {
+		if !event.EndDate.Before(fromTime.Add(-maxLiveTime)) {
+			s.mu.Lock()
+			delete(s.data, key)
+			s.mu.Unlock()
+		}
+	}
+	s.log.Debug().Msgf("Successfully delete old events")
+	return nil
+}
+
+func (s *Storage) SetSentStatusToEvents(_ context.Context, ids []string) error {
+	s.log.Debug().Msg("Start set statuses to events")
+	for _, id := range ids {
+		if _, ok := s.data[id]; ok {
+			s.data[id].IsSent = true
+		}
+	}
+	s.log.Debug().Msgf("Successfully set sent statuses to events")
+	return nil
 }

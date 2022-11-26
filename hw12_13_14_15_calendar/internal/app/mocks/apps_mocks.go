@@ -7,7 +7,6 @@ package appsmocks
 import (
 	context "context"
 	reflect "reflect"
-	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	storage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -186,21 +185,6 @@ func (mr *MockStorageMockRecorder) DeleteEvent(ctx, id interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvent", reflect.TypeOf((*MockStorage)(nil).DeleteEvent), ctx, id)
 }
 
-// DeleteOldEventsBeforeTime mocks base method.
-func (m *MockStorage) DeleteOldEventsBeforeTime(ctx context.Context, fromTime time.Time, maxLiveTime time.Duration) ([]*storage.Event, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOldEventsBeforeTime", ctx, fromTime, maxLiveTime)
-	ret0, _ := ret[0].([]*storage.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeleteOldEventsBeforeTime indicates an expected call of DeleteOldEventsBeforeTime.
-func (mr *MockStorageMockRecorder) DeleteOldEventsBeforeTime(ctx, fromTime, maxLiveTime interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOldEventsBeforeTime", reflect.TypeOf((*MockStorage)(nil).DeleteOldEventsBeforeTime), ctx, fromTime, maxLiveTime)
-}
-
 // GetEvent mocks base method.
 func (m *MockStorage) GetEvent(ctx context.Context, id string) (*storage.Event, error) {
 	m.ctrl.T.Helper()
@@ -229,21 +213,6 @@ func (m *MockStorage) ListEvents(ctx context.Context) ([]*storage.Event, error) 
 func (mr *MockStorageMockRecorder) ListEvents(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockStorage)(nil).ListEvents), ctx)
-}
-
-// ListEventsToNotify mocks base method.
-func (m *MockStorage) ListEventsToNotify(ctx context.Context, fromTime time.Time, period time.Duration) ([]*storage.Event, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEventsToNotify", ctx, fromTime, period)
-	ret0, _ := ret[0].([]*storage.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListEventsToNotify indicates an expected call of ListEventsToNotify.
-func (mr *MockStorageMockRecorder) ListEventsToNotify(ctx, fromTime, period interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsToNotify", reflect.TypeOf((*MockStorage)(nil).ListEventsToNotify), ctx, fromTime, period)
 }
 
 // ModifyEvent mocks base method.

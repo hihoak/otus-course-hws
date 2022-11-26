@@ -35,6 +35,7 @@ sender:
 
 scheduler:
   scanperiod: 5s
+  cleanperiod: 5s
   notifyperiod: 5s
   eventsdeprecationageindays: 365
   exchangetonotifyevents: "calendar_scheduler"

@@ -6,32 +6,22 @@ import (
 	"fmt"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	multiErr "github.com/hashicorp/go-multierror"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
-	"github.com/pkg/errors"
 )
 
-type IScheduler interface {
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
-
-	CleanOldEvents(ctx context.Context) error
-	ProduceNotifications(ctx context.Context) error
-}
-
 type Storage interface {
-	ListEventsToNotify(ctx context.Context, fromTime time.Time, period time.Duration) ([]*storage.Event, error)
+	ListEventsToNotify(ctx context.Context, fromTime time.Time, countOfEvents int) ([]*storage.Event, error)
 	DeleteOldEventsBeforeTime(ctx context.Context,
-		fromTime time.Time, maxLiveTime time.Duration) ([]*storage.Event, error)
+		fromTime time.Time, maxLiveTime time.Duration) error
 }
 
 type Sequence interface {
-	Push(ctx context.Context, exchange string, message []byte) error
+	Push(ctx context.Context, exchange string, messages [][]byte) error
 }
 
 type Scheduler struct {
-	IScheduler
 	storage  Storage
 	sequence Sequence
 
@@ -40,6 +30,7 @@ type Scheduler struct {
 
 	exchangeToSendNotifications string
 	scanPeriod                  time.Duration
+	cleanPeriod                 time.Duration
 	eventsDeprecationAge        time.Duration
 	notifyPeriod                time.Duration
 }
@@ -49,6 +40,7 @@ func NewSchedulerImpl(
 	storage Storage,
 	sequence Sequence,
 	scanPeriod time.Duration,
+	cleanPeriod time.Duration,
 	eventsDeprecationAge time.Duration,
 	notifyPeriod time.Duration,
 	exchangeToSendNotifications string,
@@ -61,6 +53,7 @@ func NewSchedulerImpl(
 		doneChan: make(chan interface{}),
 
 		scanPeriod:           scanPeriod,
+		cleanPeriod:          cleanPeriod,
 		eventsDeprecationAge: eventsDeprecationAge,
 		notifyPeriod:         notifyPeriod,
 
@@ -68,76 +61,82 @@ func NewSchedulerImpl(
 	}
 }
 
-func (s *Scheduler) CleanOldEvents(ctx context.Context) error {
+func (s *Scheduler) cleanOldEvents(ctx context.Context) error {
 	s.log.Info().Msg("start deleting old events...")
-	events, err := s.storage.DeleteOldEventsBeforeTime(ctx, time.Now().Local(), s.eventsDeprecationAge)
+	err := s.storage.DeleteOldEventsBeforeTime(ctx, time.Now().Local(), s.eventsDeprecationAge)
 	if err != nil {
-		return errors.Wrap(err, "failed to clean old events")
+		return fmt.Errorf("failed to clean old events: %w", err)
 	}
-	s.log.Info().Msgf("successfully clean old events total: '%d'", len(events))
+	s.log.Info().Msgf("successfully clean old events total")
 	return nil
 }
 
-func (s *Scheduler) ProduceNotifications(ctx context.Context) error {
+func (s *Scheduler) produceNotifications(ctx context.Context) error {
 	s.log.Info().Msg("start sending notifications about coming events...")
-	events, err := s.storage.ListEventsToNotify(ctx, time.Now().Local(), s.notifyPeriod)
+	events, err := s.storage.ListEventsToNotify(ctx, time.Now().Local(), 2000)
 	if err != nil {
-		return errors.Wrap(err, "failed to get events to notify")
+		return fmt.Errorf("failed to get events to notify: %w", err)
 	}
 	s.log.Info().Msgf("successfully got events to notify total: '%d'. Now start produce it in a sequence", len(events))
-	var multiError error
-	for _, event := range events {
-		sendErr := s.sendEvent(ctx, event)
-		if sendErr != nil {
-			multiError = multierror.Append(multiError, sendErr)
-		}
+	sendErr := s.sendEvents(ctx, events)
+	if sendErr != nil {
+		return fmt.Errorf("failed to sent notifications: %w", sendErr)
 	}
 
-	return multiError
+	return nil
 }
 
-func (s *Scheduler) sendEvent(ctx context.Context, event *storage.Event) error {
-	notification := FromEventToNotification(event)
-	message, marshallErr := json.Marshal(notification)
-	if marshallErr != nil {
-		return errors.Wrap(marshallErr, "something goes wrong when trying to marshall notification")
+func (s *Scheduler) sendEvents(ctx context.Context, events []*storage.Event) error {
+	messages := make([][]byte, len(events))
+	var multiError *multiErr.Error
+	for idx, notification := range fromEventsToNotifications(events) {
+		message, marshallErr := json.Marshal(notification)
+		if marshallErr != nil {
+			multiError = multiErr.Append(multiError,
+				fmt.Errorf("something goes wrong when trying to marshall notification: %w", marshallErr))
+		}
+		messages[idx] = message
 	}
-	err := s.sequence.Push(ctx, s.exchangeToSendNotifications, message)
+	if multiError != nil {
+		return multiError
+	}
+	err := s.sequence.Push(ctx, s.exchangeToSendNotifications, messages)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to push notification %s to channle %s",
-			s.exchangeToSendNotifications, message))
+		return fmt.Errorf("failed to push to channle %s notifications %d: %w",
+			s.exchangeToSendNotifications, len(messages), err)
 	}
 
-	s.log.Debug().Msgf("successfully send message %s to channel %s",
-		s.exchangeToSendNotifications, message)
+	s.log.Debug().Msgf("successfully send message %d to channel %s",
+		messages, s.exchangeToSendNotifications)
 	return nil
 }
 
 func (s *Scheduler) Start(ctx context.Context) error {
 	s.log.Info().Msg("Starting scheduler...")
-	ticker := time.NewTicker(s.scanPeriod)
+	scanTicker := time.NewTicker(s.scanPeriod)
+	cleanTicker := time.NewTicker(s.cleanPeriod)
 	for {
 		select {
 		case <-s.doneChan:
 			s.log.Info().Msgf("got a signal to stop scheduling...")
 			return nil
-		case <-ticker.C:
-			// TODO: add support to trigger by a signal
-		}
-
-		if err := s.CleanOldEvents(ctx); err != nil {
-			s.log.Error().Err(err).Msgf("failed to clean old events")
-			return err
-		}
-
-		if err := s.ProduceNotifications(ctx); err != nil {
-			s.log.Error().Err(err).Msgf("failed to produce notifications")
-			return err
+		case <-scanTicker.C:
+			go func() {
+				if err := s.cleanOldEvents(ctx); err != nil {
+					s.log.Error().Err(err).Msgf("failed to clean old events")
+				}
+			}()
+		case <-cleanTicker.C:
+			go func() {
+				if err := s.produceNotifications(ctx); err != nil {
+					s.log.Error().Err(err).Msgf("failed to produce notifications")
+				}
+			}()
 		}
 	}
 }
 
-func (s *Scheduler) Stop(ctx context.Context) error {
+func (s *Scheduler) Stop(_ context.Context) error {
 	s.log.Info().Msg("Stopping scheduler work...")
 	close(s.doneChan)
 	return nil
