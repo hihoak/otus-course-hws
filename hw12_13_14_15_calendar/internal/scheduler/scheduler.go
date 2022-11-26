@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
+	multiErr "github.com/hashicorp/go-multierror"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
 )
@@ -88,11 +88,11 @@ func (s *Scheduler) produceNotifications(ctx context.Context) error {
 
 func (s *Scheduler) sendEvents(ctx context.Context, events []*storage.Event) error {
 	messages := make([][]byte, len(events))
-	var multiError *multierror.Error
+	var multiError *multiErr.Error
 	for idx, notification := range fromEventsToNotifications(events) {
 		message, marshallErr := json.Marshal(notification)
 		if marshallErr != nil {
-			multiError = multierror.Append(multiError,
+			multiError = multiErr.Append(multiError,
 				fmt.Errorf("something goes wrong when trying to marshall notification: %w", marshallErr))
 		}
 		messages[idx] = message
