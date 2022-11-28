@@ -27,10 +27,11 @@ type SenderConf struct {
 }
 
 type RabbitConf struct {
-	RabbitURL      string   `config:"rabbit_url"`
-	ExchangesNames []string `config:"rabbit_exchanges_names"`
-	QueueNames     []string `config:"rabbit_queue_names"`
-	Bindings       []Bind   `config:"rabbit_bindings"`
+	RabbitURL          string   `config:"rabbit_url"`
+	ExchangesNames     []string `config:"rabbit_exchanges_names"`
+	QueueNames         []string `config:"rabbit_queue_names"`
+	Bindings           []Bind   `config:"rabbit_bindings"`
+	ConnectionAttempts int      `config:"connection_attempts"`
 }
 
 type Bind struct {

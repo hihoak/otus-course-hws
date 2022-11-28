@@ -42,6 +42,7 @@ type Storage interface {
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*storage.Event, error)
 	ListEvents(ctx context.Context) ([]*storage.Event, error)
+	ListEventsForDays(ctx context.Context, date *time.Time, forDays int64) ([]*storage.Event, error)
 }
 
 func New(logger Logger, storage Storage) *App {
@@ -203,6 +204,25 @@ func (a *App) DeleteEvent(ctx context.Context, req *desc.DeleteEventRequest) (*d
 func (a *App) ListEvent(ctx context.Context, req *desc.ListEventRequest) (*desc.ListEventResponse, error) {
 	a.Logg.Info().Msg("ListEvent - start listing events")
 	events, err := a.Store.ListEvents(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal,
+			fmt.Errorf("can't list events: %w", err).Error())
+	}
+	a.Logg.Info().Msg("Successfully list events")
+	return &desc.ListEventResponse{
+		Events: ConvertEventsToPb(events),
+	}, nil
+}
+
+func (a *App) ListEventForDays(
+	ctx context.Context,
+	req *desc.ListEventForDaysRequest,
+) (*desc.ListEventResponse, error) {
+	a.Logg.Info().Msg("ListEvent - start listing events")
+	if req.GetDate() == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty 'date' field")
+	}
+	events, err := a.Store.ListEventsForDays(ctx, ConvertFromPbDateTimeToTime(req.GetDate()), req.GetForDays())
 	if err != nil {
 		return nil, status.Error(codes.Internal,
 			fmt.Errorf("can't list events: %w", err).Error())

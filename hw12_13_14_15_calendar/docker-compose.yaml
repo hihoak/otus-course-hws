@@ -1,7 +1,9 @@
 version: "3.8"
 services:
   migrations:
-    image: "docker.io/soundsofanarchy/otus-calendar-migrations-image:v0.0.2"
+    build:
+      dockerfile: build/migrations/Dockerfile
+      context: .
     depends_on:
       - postgres
 
@@ -9,7 +11,6 @@ services:
     image: "postgres:15.0"
     ports:
       - "5432:5432"
-    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -20,7 +21,11 @@ services:
     image: rabbitmq:3.11.2
     ports:
       - "5672:5672"
-    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 1s
+      timeout: 3s
+      retries: 60
     environment:
       RABBITMQ_DEFAULT_USER: "user"
       RABBITMQ_DEFAULT_PASS: "password"
@@ -28,11 +33,11 @@ services:
       - "rabbit:/var/lib/rabbitmq"
 
   calendar-api:
-    image: "docker.io/soundsofanarchy/otus-calendar:v0.0.6"
+    build:
+      dockerfile: build/calendar/Dockerfile
+      context: .
     depends_on:
-      - postgres
       - migrations
-    restart: "always"
     environment:
       SERVER_HOST: "0.0.0.0"
       USE_IN_MEMORY_STORAGE: "false"
@@ -46,14 +51,18 @@ services:
       - "9000:9000"
 
   calendar-scheduler:
-    image: "docker.io/soundsofanarchy/otus-calendar-scheduler:v0.0.1"
+    build:
+      dockerfile: build/scheduler/Dockerfile
+      context: .
     depends_on:
-      - rabbit
-      - postgres
-      - migrations
+      rabbit:
+        condition: service_healthy
+      migrations:
+        condition: service_started
     restart: "always"
     environment:
       DB_HOST: "postgres"
+      DB_PORT: "5432"
       DB_USER: "postgres"
       DB_PASSWORD: "password"
       LOG_LEVEL: "debug"
@@ -65,14 +74,22 @@ services:
       SCHEDULER_EXCHANGE_TO_NOTIFY_EVENTS: "calendar_scheduler"
 
   calendar-sender:
-    image: "docker.io/soundsofanarchy/otus-sender:v0.0.1"
+    build:
+      dockerfile: build/sender/Dockerfile
+      context: .
     depends_on:
-      - calendar-scheduler
+      rabbit:
+        condition: service_healthy
+      migrations:
+        condition: service_started
     restart: "always"
     environment:
       LOG_LEVEL: "debug"
       RABBIT_URL: "amqp://user:password@rabbit:5672"
       SENDER_QUEUE_TO_PULL_NOTIFICATIONS: "calendar_sender"
+      DB_HOST: "postgres"
+      DB_USER: "postgres"
+      DB_PASSWORD: "password"
 
 
 volumes:

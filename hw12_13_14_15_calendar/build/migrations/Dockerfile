@@ -14,4 +14,4 @@ COPY ${MIGRATIONS_FOLDER} ${MIGRATIONS_FOLDER}
 ENV GOOSE_DRIVER "postgres"
 ENV GOOSE_DBSTRING "host=postgres port=5432 user=postgres password=password dbname=postgres sslmode=disable"
 
-CMD goose -dir ${MIGRATIONS_FOLDER} up
+CMD goose -dir ${MIGRATIONS_FOLDER} up && sleep 120

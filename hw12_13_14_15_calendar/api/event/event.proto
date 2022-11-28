@@ -36,6 +36,13 @@ service EventService {
     };
   }
 
+  rpc ListEventForDays(ListEventForDaysRequest) returns (ListEventResponse) {
+    option (google.api.http) = {
+      post: "/event/list/for-days"
+      body: "*"
+    };
+  }
+
   rpc ModifyEvent(ModifyEventRequest) returns (Empty) {
     option (google.api.http) = {
       post: "/event/modify"
@@ -77,13 +84,18 @@ message ModifyEventRequest {
 }
 
 message Event {
-  string id = 1;
-  string title = 2;
-  google.type.DateTime start_date = 3;
-  google.type.DateTime end_date = 4;
-  string description = 5;
-  string user_id = 6;
-  google.type.DateTime notify_date = 7;
+  string id = 1 [json_name = "id"];
+  string title = 2 [json_name = "title"];
+  google.type.DateTime start_date = 3 [json_name = "start_date"];
+  google.type.DateTime end_date = 4 [json_name = "end_date"];
+  string description = 5 [json_name = "description"];
+  string user_id = 6 [json_name = "user_id"];
+  google.type.DateTime notify_date = 7 [json_name = "notify_date"];
 }
 
 message Empty {}
+
+message ListEventForDaysRequest {
+  google.type.DateTime date = 1;
+  int64 forDays = 2;
+}

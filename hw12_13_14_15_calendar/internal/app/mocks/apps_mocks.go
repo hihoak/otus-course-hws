@@ -7,6 +7,7 @@ package appsmocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	storage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -213,6 +214,21 @@ func (m *MockStorage) ListEvents(ctx context.Context) ([]*storage.Event, error) 
 func (mr *MockStorageMockRecorder) ListEvents(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockStorage)(nil).ListEvents), ctx)
+}
+
+// ListEventsForDays mocks base method.
+func (m *MockStorage) ListEventsForDays(ctx context.Context, date *time.Time, forDays int64) ([]*storage.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEventsForDays", ctx, date, forDays)
+	ret0, _ := ret[0].([]*storage.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEventsForDays indicates an expected call of ListEventsForDays.
+func (mr *MockStorageMockRecorder) ListEventsForDays(ctx, date, forDays interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsForDays", reflect.TypeOf((*MockStorage)(nil).ListEventsForDays), ctx, date, forDays)
 }
 
 // ModifyEvent mocks base method.

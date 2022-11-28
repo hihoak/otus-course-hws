@@ -83,7 +83,10 @@ func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
 		INSERT INTO events (id, title, start_date, end_date, description, user_id, notify_date)
         VALUES (:id, :title, :start_date, :end_date, :description, :user_id, :notify_date)`
 
-	dontSend := event.NotifyDate.Before(*event.StartDate)
+	dontSend := false
+	if event.NotifyDate == nil || event.NotifyDate.Before(*event.StartDate) {
+		dontSend = true
+	}
 	event.IsSent = dontSend
 	event.ScheduledToNotify = dontSend
 
@@ -152,7 +155,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (*storage.Event, erro
 func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	s.log.Debug().Msg("Start listing events")
 	query := `
-	SELECT id, title, start_date, end_date, description, user_id, notify_date
+	SELECT *
 	FROM events;
 	`
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
@@ -169,13 +172,37 @@ func (s *Storage) ListEvents(ctx context.Context) ([]*storage.Event, error) {
 	return events, nil
 }
 
+func (s *Storage) ListEventsForDays(ctx context.Context, date *time.Time, forDays int64) ([]*storage.Event, error) {
+	s.log.Debug().Msgf("Start listing events for a day: %s", date)
+	query := `
+	SELECT *
+	FROM events
+	WHERE start_date >= $1 and start_date < $2`
+	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
+	defer cancel()
+	needDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+
+	untilDay := needDay.Add(time.Hour * 24 * time.Duration(forDays))
+	rows, err := s.db.QueryxContext(ctx, query,
+		s.timeToSQLTimeWithTimezone(needDay), s.timeToSQLTimeWithTimezone(untilDay))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", err.Error(), errs.ErrListEvents)
+	}
+	events, scanErr := s.fromSQLRowsToEvents(rows)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", scanErr.Error(), errs.ErrListEvents)
+	}
+	s.log.Debug().Msgf("Successfully list %d events for a day: %s", len(events), date)
+	return events, nil
+}
+
 func (s *Storage) ListEventsToNotify(ctx context.Context,
 	fromTime time.Time, countOfEvents int,
 ) ([]*storage.Event, error) {
 	s.log.Debug().Msg("ListEventsToNotify - start method")
 	query := strings.Builder{}
 	query.WriteString(`
-	SELECT id, title, start_date, user_id
+	SELECT *
 	FROM events `)
 	sqlFromTimeStr := s.timeToSQLTimeWithTimezone(fromTime)
 	query.WriteString(

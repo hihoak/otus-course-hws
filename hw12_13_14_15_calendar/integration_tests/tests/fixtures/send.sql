@@ -1,0 +1,18 @@
+INSERT INTO events (id,
+                    title,
+                    start_date,
+                    end_date,
+                    description,
+                    user_id,
+                    notify_date,
+                    scheduled_to_notify,
+                    is_sent)
+VALUES ('send-test-123',
+        'bye, Otus!',
+        now(),
+        now(),
+        'im very happy to study here',
+        '321',
+        now(),
+        false,
+        false);

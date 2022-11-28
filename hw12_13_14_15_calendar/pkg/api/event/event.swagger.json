@@ -144,6 +144,38 @@
         ]
       }
     },
+    "/event/list/for-days": {
+      "post": {
+        "operationId": "EventService_ListEventForDays",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/eventListEventResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/eventListEventForDaysRequest"
+            }
+          }
+        ],
+        "tags": [
+          "EventService"
+        ]
+      }
+    },
     "/event/modify": {
       "post": {
         "operationId": "EventService_ModifyEvent",
@@ -221,19 +253,19 @@
         "title": {
           "type": "string"
         },
-        "startDate": {
+        "start_date": {
           "$ref": "#/definitions/typeDateTime"
         },
-        "endDate": {
+        "end_date": {
           "$ref": "#/definitions/typeDateTime"
         },
         "description": {
           "type": "string"
         },
-        "userId": {
+        "user_id": {
           "type": "string"
         },
-        "notifyDate": {
+        "notify_date": {
           "$ref": "#/definitions/typeDateTime"
         }
       }
@@ -251,6 +283,18 @@
       "properties": {
         "event": {
           "$ref": "#/definitions/eventEvent"
+        }
+      }
+    },
+    "eventListEventForDaysRequest": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "$ref": "#/definitions/typeDateTime"
+        },
+        "forDays": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -344,11 +388,11 @@
           "format": "int32",
           "description": "Required. Fractions of seconds in nanoseconds. Must be from 0 to\n999,999,999."
         },
-        "utcOffset": {
+        "utc_offset": {
           "type": "string",
           "description": "UTC offset. Must be whole seconds, between -18 hours and +18 hours.\nFor example, a UTC offset of -4:00 would be represented as\n{ seconds: -14400 }."
         },
-        "timeZone": {
+        "time_zone": {
           "$ref": "#/definitions/typeTimeZone",
           "description": "Time zone."
         }

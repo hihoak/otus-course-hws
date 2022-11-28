@@ -3,12 +3,14 @@ module github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar
 go 1.16
 
 require (
+	bou.ke/monkey v1.0.2
 	github.com/golang/mock v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heetch/confita v0.10.0
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/json-iterator/go v1.1.12
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
