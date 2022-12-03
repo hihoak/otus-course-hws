@@ -58,7 +58,7 @@ func TestStorage(t *testing.T) {
 	t.Run("test storage - ADD", func(t *testing.T) {
 		st := New(logger.New("debug"))
 		timeNow := time.Now()
-		err := st.AddEvent(context.Background(), &storage.Event{
+		_, err := st.AddEvent(context.Background(), &storage.Event{
 			Title:     testTitle,
 			StartDate: &timeNow,
 		})

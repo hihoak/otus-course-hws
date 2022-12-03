@@ -78,7 +78,7 @@ func (s *Storage) Close(ctx context.Context) error {
 	return s.db.Close()
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) (string, error) {
 	query := `
 		INSERT INTO events (id, title, start_date, end_date, description, user_id, notify_date)
         VALUES (:id, :title, :start_date, :end_date, :description, :user_id, :notify_date)`
@@ -96,18 +96,38 @@ func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)
 	if err != nil {
-		return fmt.Errorf("%s: %w", err.Error(), errs.ErrAddEvent)
+		return "", fmt.Errorf("%s: %w", err.Error(), errs.ErrAddEvent)
 	}
 	s.log.Debug().Msgf("Successfully add event with id %s", event.ID)
-	return err
+	return event.ID, nil
 }
 
 func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {
 	s.log.Debug().Msgf("Start editing event with id %s", event.ID)
-	query := `
-	UPDATE events
-	SET title = :title
-	WHERE id = :id;`
+	query := "UPDATE events "
+	setQuery := make([]string, 0)
+	if event.Title != "" {
+		setQuery = append(setQuery, "title=:title")
+	}
+	if event.StartDate != nil {
+		setQuery = append(setQuery, "start_date=:start_date")
+	}
+	if event.EndDate != nil {
+		setQuery = append(setQuery, "end_date=:end_date")
+	}
+	if event.Description != "" {
+		setQuery = append(setQuery, "description=:description")
+	}
+	if event.UserID != "" {
+		setQuery = append(setQuery, "user_id=:user_id")
+	}
+	if event.NotifyDate != nil {
+		setQuery = append(setQuery, "notify_date=:notify_date")
+	}
+	if len(setQuery) == 0 {
+		return fmt.Errorf("nothing to update")
+	}
+	query += "SET " + strings.Join(setQuery, ",") + " WHERE id=:id;"
 	ctx, cancel := context.WithTimeout(ctx, s.connectionTimeout)
 	defer cancel()
 	_, err := s.db.NamedExecContext(ctx, query, event)

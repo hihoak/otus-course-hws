@@ -131,11 +131,12 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AddEvent mocks base method.
-func (m *MockStorage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (m *MockStorage) AddEvent(ctx context.Context, event *storage.Event) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEvent", ctx, event)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddEvent indicates an expected call of AddEvent.

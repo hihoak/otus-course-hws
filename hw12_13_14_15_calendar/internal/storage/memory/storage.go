@@ -37,14 +37,14 @@ func (s *Storage) Close(ctx context.Context) error {
 	return nil
 }
 
-func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) error {
+func (s *Storage) AddEvent(ctx context.Context, event *storage.Event) (string, error) {
 	event.ID = xid.New().String()
 	s.log.Debug().Msgf("Start adding event with id %s", event.ID)
 	s.mu.Lock()
 	s.data[event.ID] = event
 	s.mu.Unlock()
 	s.log.Debug().Msgf("Successfully add event with id %s", event.ID)
-	return nil
+	return event.ID, nil
 }
 
 func (s *Storage) ModifyEvent(ctx context.Context, event *storage.Event) error {

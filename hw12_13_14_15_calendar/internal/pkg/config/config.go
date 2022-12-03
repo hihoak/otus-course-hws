@@ -24,6 +24,7 @@ type Config struct {
 
 type SenderConf struct {
 	QueueToPullNotifications string `config:"sender_queue_to_pull_notifications"`
+	OutputFile               string `config:"output_file"`
 }
 
 type RabbitConf struct {

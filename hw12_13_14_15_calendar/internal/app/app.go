@@ -37,7 +37,7 @@ type Storage interface {
 	Close(ctx context.Context) error
 
 	// Main app eventsa
-	AddEvent(ctx context.Context, event *storage.Event) error
+	AddEvent(ctx context.Context, event *storage.Event) (string, error)
 	ModifyEvent(ctx context.Context, event *storage.Event) error
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*storage.Event, error)
@@ -115,7 +115,19 @@ func ConvertFromPbDateTimeToTime(pbDateTime *datetime.DateTime) *time.Time {
 	return &goTime
 }
 
-func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.AddEventRequest) (*storage.Event, error) {
+func ConvertPbToEvent(event *desc.Event) *storage.Event {
+	return &storage.Event{
+		ID:          event.GetId(),
+		Title:       event.GetTitle(),
+		StartDate:   ConvertFromPbDateTimeToTime(event.GetStartDate()),
+		EndDate:     ConvertFromPbDateTimeToTime(event.GetEndDate()),
+		Description: event.GetDescription(),
+		UserID:      event.GetUserId(),
+		NotifyDate:  ConvertFromPbDateTimeToTime(event.GetNotifyDate()),
+	}
+}
+
+func validateAndConvertAddEventRequestToEvent(event *desc.AddEventRequest) (*storage.Event, error) {
 	if event.GetTitle() == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -131,7 +143,7 @@ func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.Ad
 	case endDate != nil:
 		startDate = endDate
 	default:
-		startDate = timeNow
+		return nil, status.Errorf(codes.InvalidArgument, "required start date or end date field to fill")
 	}
 
 	if endDate != nil && endDate.Before(*startDate) {
@@ -152,22 +164,21 @@ func validateAndConvertAddEventRequestToEvent(timeNow *time.Time, event *desc.Ad
 	}, nil
 }
 
-func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc.Empty, error) {
+func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc.AddEventResponse, error) {
 	a.Logg.Info().Msg("CreateEvent - start creating event")
-	timeNow := time.Now()
-	event, validationErr := validateAndConvertAddEventRequestToEvent(&timeNow, req)
+	event, validationErr := validateAndConvertAddEventRequestToEvent(req)
 	if validationErr != nil {
 		validationErr = status.Errorf(codes.InvalidArgument, validationErr.Error())
 		a.Logg.Error().Err(validationErr).Msg("CreateEvent - failed validation")
-		return &desc.Empty{}, validationErr
+		return nil, validationErr
 	}
-	err := a.Store.AddEvent(ctx, event)
+	id, err := a.Store.AddEvent(ctx, event)
 	if err != nil {
 		a.Logg.Error().Err(err).Msgf("Can't create event with title '%s'", event.Title)
-		return &desc.Empty{}, fmt.Errorf("can't create event with Title '%s': %w", event.Title, err)
+		return nil, fmt.Errorf("can't create event with Title '%s': %w", event.Title, err)
 	}
 	a.Logg.Info().Msgf("Successfully create event with Title '%s'", event.Title)
-	return &desc.Empty{}, nil
+	return &desc.AddEventResponse{Id: id}, nil
 }
 
 func (a *App) GetEvent(ctx context.Context, req *desc.GetEventRequest) (*desc.GetEventResponse, error) {
@@ -235,15 +246,12 @@ func (a *App) ListEventForDays(
 
 func (a *App) ModifyEvent(ctx context.Context, req *desc.ModifyEventRequest) (*desc.Empty, error) {
 	a.Logg.Info().Msg("ModifyEvent - start listing events")
-	err := a.Store.ModifyEvent(ctx, &storage.Event{
-		ID:    req.GetId(),
-		Title: req.GetTitle(),
-	})
+	err := a.Store.ModifyEvent(ctx, ConvertPbToEvent(req.GetEvent()))
 	if err != nil {
 		return nil,
 			status.Error(codes.Internal,
-				fmt.Errorf("can't modify event with id '%s': %w", req.GetId(), err).Error())
+				fmt.Errorf("can't modify event with id '%s': %w", req.GetEvent().GetId(), err).Error())
 	}
-	a.Logg.Info().Msgf("Successfully modify event with id '%s'", req.GetId())
+	a.Logg.Info().Msgf("Successfully modify event with id '%s'", req.GetEvent().GetId())
 	return &desc.Empty{}, nil
 }

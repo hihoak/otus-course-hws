@@ -90,6 +90,9 @@ services:
       DB_HOST: "postgres"
       DB_USER: "postgres"
       DB_PASSWORD: "password"
+      OUTPUT_FILE: /tmp/sender/out.txt
+    volumes:
+      - /tmp/sender:/tmp/sender
 
 
 volumes:

@@ -38,10 +38,10 @@ func (m *MockApplication) EXPECT() *MockApplicationMockRecorder {
 }
 
 // CreateEvent mocks base method.
-func (m *MockApplication) CreateEvent(arg0 context.Context, arg1 *hw12_13_14_15_calendar.AddEventRequest) (*hw12_13_14_15_calendar.Empty, error) {
+func (m *MockApplication) CreateEvent(arg0 context.Context, arg1 *hw12_13_14_15_calendar.AddEventRequest) (*hw12_13_14_15_calendar.AddEventResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateEvent", arg0, arg1)
-	ret0, _ := ret[0].(*hw12_13_14_15_calendar.Empty)
+	ret0, _ := ret[0].(*hw12_13_14_15_calendar.AddEventResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

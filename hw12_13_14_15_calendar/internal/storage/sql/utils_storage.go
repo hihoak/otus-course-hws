@@ -29,6 +29,15 @@ func (s *Storage) fromSQLRowsToEvents(rows *sqlx.Rows) ([]*storage.Event, error)
 		if scanErr := rows.StructScan(&event); scanErr != nil {
 			return nil, fmt.Errorf("%s: %w", scanErr.Error(), errs.ErrListEventsToNotify)
 		}
+		if event.StartDate != nil {
+			*event.StartDate = event.StartDate.In(time.UTC)
+		}
+		if event.EndDate != nil {
+			*event.EndDate = event.EndDate.In(time.UTC)
+		}
+		if event.NotifyDate != nil {
+			*event.NotifyDate = event.NotifyDate.In(time.UTC)
+		}
 		events = append(events, &event)
 	}
 	return events, nil

@@ -6,11 +6,14 @@ services:
       context: .
     environment:
       DB_DSN: host=postgres port=5432 user=postgres password=password dbname=postgres sslmode=disable
-      CALENDAR_API_URL: http://calendar-api:8000
+      CALENDAR_API_URL: calendar-api:9000
+      SENDER_OUTPUT_FILE: /tmp/sender/out.txt
     depends_on:
       - calendar-api
       - calendar-scheduler
       - calendar-sender
+    volumes:
+      - /tmp/sender:/tmp/sender
 
   migrations:
     build:
@@ -102,6 +105,9 @@ services:
       DB_HOST: "postgres"
       DB_USER: "postgres"
       DB_PASSWORD: "password"
+      OUTPUT_FILE: /tmp/sender/out.txt
+    volumes:
+      - /tmp/sender:/tmp/sender
 
 volumes:
   postgres:

@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/config"
@@ -67,7 +70,17 @@ func main() {
 	}
 	logg.Info().Msg("Successfully connected to DB. Start connection to sequence...")
 
-	sndr := sender.NewSender(ctx, logg, rabb, st, cfg.Sender.QueueToPullNotifications)
+	splitPath := strings.Split(cfg.Sender.OutputFile, "/")
+	fmt.Println("creating directory in ", "/"+strings.Join(splitPath[:len(splitPath)-1], "/"))
+	if err := os.MkdirAll(strings.Join(splitPath[:len(splitPath)-1], "/"), 0o777); err != nil {
+		logg.Fatal().Err(err).Msg("failed to create dir")
+	}
+	outputFile, err := os.OpenFile(cfg.Sender.OutputFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o777)
+	if err != nil {
+		logg.Fatal().Err(err).Msgf("failed to open output file '%s'", outputFile.Name())
+	}
+
+	sndr := sender.NewSender(ctx, logg, rabb, st, outputFile, cfg.Sender.QueueToPullNotifications)
 
 	defer func() {
 		if stopErr := sndr.Stop(ctx); stopErr != nil {

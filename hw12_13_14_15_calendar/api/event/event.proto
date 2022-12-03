@@ -8,7 +8,7 @@ import "api/google/protobuf/timestamp.proto";
 import "api/google/type/datetime.proto";
 
 service EventService {
-  rpc CreateEvent(AddEventRequest) returns (Empty) {
+  rpc CreateEvent(AddEventRequest) returns (AddEventResponse) {
     option (google.api.http) = {
       post: "/event/create"
       body: "*"
@@ -60,6 +60,10 @@ message AddEventRequest {
   google.type.DateTime notify_date = 7;
 }
 
+message AddEventResponse {
+  string id = 1;
+}
+
 message DeleteEventRequest {
   string id = 1;
 }
@@ -79,8 +83,7 @@ message ListEventResponse {
 }
 
 message ModifyEventRequest {
-  string id = 1;
-  string title = 2;
+  Event event = 1;
 }
 
 message Event {

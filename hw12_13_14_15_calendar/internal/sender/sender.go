@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
@@ -25,10 +26,15 @@ type Sender struct {
 	doneChan chan interface{}
 
 	queueToPullNotifications string
+
+	outputFile *os.File
 }
 
 type Notification struct {
-	EventID string `json:"eventId"`
+	EventID     string `json:"eventId"`
+	Title       string `json:"eventTitle"`
+	Description string `json:"eventStartDate"`
+	UserID      string `json:"sendToUserId"`
 }
 
 func NewSender(
@@ -36,12 +42,14 @@ func NewSender(
 	log *logger.Logger,
 	sequence Sequence,
 	storage Storager,
+	outputFile *os.File,
 	queueToPullNotifications string,
 ) *Sender {
 	return &Sender{
 		log:                      log,
 		sequence:                 sequence,
 		storage:                  storage,
+		outputFile:               outputFile,
 		queueToPullNotifications: queueToPullNotifications,
 	}
 }
@@ -85,7 +93,11 @@ func (s *Sender) send(ctx context.Context) error {
 				s.log.Error().Err(marshErr).Msgf("Sender: failed to unmarshall to notification: %s", msg)
 				continue
 			}
-			fmt.Println("consumed message: ", msg)
+			fmt.Println(msg)
+			if _, err := s.outputFile.Write(append(msg, '\n')); err != nil {
+				s.log.Error().Err(err).Msg("failed to write notification to file: ")
+				continue
+			}
 			successIDs <- notification.EventID
 		}
 	}

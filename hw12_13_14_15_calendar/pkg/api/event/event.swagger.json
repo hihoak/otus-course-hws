@@ -23,7 +23,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/eventEmpty"
+              "$ref": "#/definitions/eventAddEventResponse"
             }
           },
           "default": {
@@ -233,6 +233,14 @@
         }
       }
     },
+    "eventAddEventResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
     "eventDeleteEventRequest": {
       "type": "object",
       "properties": {
@@ -315,11 +323,8 @@
     "eventModifyEventRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
+        "event": {
+          "$ref": "#/definitions/eventEvent"
         }
       }
     },
