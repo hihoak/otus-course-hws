@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	storageerrors "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/storage_errors"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -29,7 +30,12 @@ type Logger interface {
 }
 
 type Storage interface {
-	AddEvent(ctx context.Context, title string) error
+	// common methods
+	Connect(ctx context.Context) error
+	Close(ctx context.Context) error
+
+	// Main app eventsa
+	AddEvent(ctx context.Context, title string, NotifyDate, timeNow time.Time) error
 	ModifyEvent(ctx context.Context, event *storage.Event) error
 	DeleteEvent(ctx context.Context, id string) error
 	GetEvent(ctx context.Context, id string) (*storage.Event, error)
@@ -60,7 +66,7 @@ func ConvertEventsToPb(events []*storage.Event) []*desc.Event {
 
 func (a *App) CreateEvent(ctx context.Context, req *desc.AddEventRequest) (*desc.Empty, error) {
 	a.Logg.Info().Msg("CreateEvent - start creating event")
-	err := a.Store.AddEvent(ctx, req.GetTitle())
+	err := a.Store.AddEvent(ctx, req.GetTitle(), time.Now(), time.Now())
 	if err != nil {
 		a.Logg.Error().Err(err).Msgf("Can't create event with title '%s'", req.GetTitle())
 		return &desc.Empty{}, fmt.Errorf("can't create event with title '%s': %w", req.GetTitle(), err)

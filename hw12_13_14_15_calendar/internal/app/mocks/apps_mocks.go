@@ -7,6 +7,7 @@ package appsmocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	storage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage"
@@ -130,17 +131,45 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AddEvent mocks base method.
-func (m *MockStorage) AddEvent(ctx context.Context, title string) error {
+func (m *MockStorage) AddEvent(ctx context.Context, title string, NotifyDate, timeNow time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddEvent", ctx, title)
+	ret := m.ctrl.Call(m, "AddEvent", ctx, title, NotifyDate, timeNow)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddEvent indicates an expected call of AddEvent.
-func (mr *MockStorageMockRecorder) AddEvent(ctx, title interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) AddEvent(ctx, title, NotifyDate, timeNow interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, title)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, title, NotifyDate, timeNow)
+}
+
+// Close mocks base method.
+func (m *MockStorage) Close(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockStorageMockRecorder) Close(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStorage)(nil).Close), ctx)
+}
+
+// Connect mocks base method.
+func (m *MockStorage) Connect(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Connect", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Connect indicates an expected call of Connect.
+func (mr *MockStorageMockRecorder) Connect(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockStorage)(nil).Connect), ctx)
 }
 
 // DeleteEvent mocks base method.

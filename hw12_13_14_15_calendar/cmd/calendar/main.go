@@ -14,6 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/app"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/logger"
+	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/pkg/config"
 	"github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/server"
 	memorystorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/hihoak/otus-course-hws/hw12_13_14_15_calendar/internal/storage/sql"
@@ -43,21 +44,21 @@ func main() {
 
 	ctx := context.Background()
 
-	config, err := NewConfig(ctx, configFile)
+	cfg, err := config.NewConfig(ctx, configFile)
 	if err != nil {
 		log.Fatal("can't initialize config:", err)
 	}
-	logg := logger.New(config.Logger.Level)
+	logg := logger.New(cfg.Logger.Level)
 	logg.Info().Msg("Successfully initialize config...")
 
 	var st app.Storage
-	if config.UseInMemoryStorage {
+	if cfg.UseInMemoryStorage {
 		st = memorystorage.New(logg)
 	} else {
 		sqlSt := sqlstorage.New(
-			logg, config.Database.Host, config.Database.Port, config.Database.User,
-			config.Database.Password, config.Database.DBName, config.Database.ConnectionTimeout,
-			config.Database.OperationTimeout)
+			logg, cfg.Database.Host, cfg.Database.Port, cfg.Database.User,
+			cfg.Database.Password, cfg.Database.DBName, cfg.Database.ConnectionTimeout,
+			cfg.Database.OperationTimeout)
 		if connectionErr := sqlSt.Connect(ctx); connectionErr != nil {
 			logg.Fatal().Err(connectionErr).Msg("failed to connect to database")
 		}
@@ -71,15 +72,15 @@ func main() {
 
 	calendar := app.New(logg, st)
 
-	mux, muxErr := GetGrpcGatewayMultiplexer(ctx, net.JoinHostPort(config.Server.Host, config.Server.GRPCPort))
+	mux, muxErr := GetGrpcGatewayMultiplexer(ctx, net.JoinHostPort(cfg.Server.Host, cfg.Server.GRPCPort))
 	if muxErr != nil {
 		logg.Fatal().Err(err).Msg("failed to register grpc-gateway Multiplexer")
 	}
 
 	calendarServer := server.NewServer(ctx, logg, calendar, mux,
-		net.JoinHostPort(config.Server.Host, config.Server.HTTPPort),
-		net.JoinHostPort(config.Server.Host, config.Server.GRPCPort), config.Server.ReadTimeout,
-		config.Server.WriteTimeout, config.Server.ShutDownTimeout)
+		net.JoinHostPort(cfg.Server.Host, cfg.Server.HTTPPort),
+		net.JoinHostPort(cfg.Server.Host, cfg.Server.GRPCPort), cfg.Server.ReadTimeout,
+		cfg.Server.WriteTimeout, cfg.Server.ShutDownTimeout)
 
 	gracefullShutdownChan := make(chan os.Signal, 1)
 	signal.Notify(gracefullShutdownChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -92,7 +93,7 @@ func main() {
 	}()
 
 	<-gracefullShutdownChan
-	ctx, cancel := context.WithTimeout(context.Background(), config.Server.ShutDownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutDownTimeout)
 	defer cancel()
 
 	if stopErr := calendarServer.Stop(ctx); stopErr != nil {

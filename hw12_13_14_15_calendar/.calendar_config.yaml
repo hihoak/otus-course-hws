@@ -5,6 +5,7 @@ database:
   host: "localhost"
   port: "5432"
   user: "postgres"
+  password: "postgres"
   dbname: "postgres"
   connectiontimeout: 5s
   operationtimeout: 1s
@@ -16,5 +17,26 @@ server:
   readtimeout: 1s
   writetimeout: 1s
   shutdowntimeout: 3s
+
+rabbit:
+  rabbiturl: "amqp://user:password@localhost:5672"
+  exchangesnames:
+    - calendar_scheduler
+  queuenames:
+    - calendar_sender
+  bindings:
+    - queuename: calendar_sender
+      key: calendar
+      exchangename: calendar_scheduler
+
+sender:
+  queuetopullnotifications: calendar_sender
+
+scheduler:
+  scanperiod: 5s
+  cleanperiod: 5s
+  notifyperiod: 5s
+  eventsdeprecationageindays: 365
+  exchangetonotifyevents: "calendar_scheduler"
 
 use_in_memory_storage: false
