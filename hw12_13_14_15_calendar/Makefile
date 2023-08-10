@@ -1,4 +1,6 @@
 BIN := "./bin/calendar"
+BIN_SENDER := "$(BIN)_sender"
+BIN_SCHEDULER := "$(BIN)_scheduler"
 DOCKER_IMG="calendar:develop"
 DEFAULT_CONFIG_PATH="$(shell pwd)/.calendar_config.yaml"
 MIGRATIONS_FOLDER="migrations"
@@ -17,6 +19,8 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_SENDER) -ldflags "$(LDFLAGS)" ./cmd/sender
+	go build -v -o $(BIN_SCHEDULER) -ldflags "$(LDFLAGS)" ./cmd/scheduler
 
 run: build
 	$(BIN) -config $(DEFAULT_CONFIG_PATH)
@@ -51,4 +55,5 @@ migrate-down:
 	GOOSE_DRIVER=$(DB_DRIVER) GOOSE_DBSTRING=$(DB_STRING) goose -dir $(MIGRATIONS_FOLDER) down
 
 go-generate:
+	buf generate --path "api/event"
 	go generate ./...
