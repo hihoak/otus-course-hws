@@ -62,6 +62,9 @@ func (c *Client) Connect() error {
 		c.log.Error().Err(err).Msgf("failed connect to %s", c.rabbitURL)
 		return fmt.Errorf("failed connect to %s: %w", c.rabbitURL, err)
 	}
+	if err != nil {
+		return fmt.Errorf("failed connect to %s: %w", c.rabbitURL, err)
+	}
 	c.log.Info().Msgf("successfully connected to %s", c.rabbitURL)
 	c.connection = conn
 	c.log.Info().Msg("making a connection channel...")

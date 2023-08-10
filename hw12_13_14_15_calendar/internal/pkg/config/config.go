@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/heetch/confita"
+	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/file"
 )
 
@@ -22,20 +23,22 @@ type Config struct {
 }
 
 type SenderConf struct {
-	QueueToPullNotifications string `config:"queuetopullnotifications"`
+	QueueToPullNotifications string `config:"sender_queue_to_pull_notifications"`
+	OutputFile               string `config:"output_file"`
 }
 
 type RabbitConf struct {
-	RabbitURL      string   `config:"rabbiturl"`
-	ExchangesNames []string `config:"exchangesnames"`
-	QueueNames     []string `config:"queuenames"`
-	Bindings       []Bind   `config:"bindings"`
+	RabbitURL          string   `config:"rabbit_url"`
+	ExchangesNames     []string `config:"rabbit_exchanges_names"`
+	QueueNames         []string `config:"rabbit_queue_names"`
+	Bindings           []Bind   `config:"rabbit_bindings"`
+	ConnectionAttempts int      `config:"connection_attempts"`
 }
 
 type Bind struct {
-	QueueName    string `config:"queuename"`
-	Key          string `config:"key"`
-	ExchangeName string `config:"exchangename"`
+	QueueName    string `config:"bind_queue_name"`
+	Key          string `config:"bind_key"`
+	ExchangeName string `config:"bind_exchange_name"`
 }
 
 type SchedulerConf struct {
@@ -47,31 +50,32 @@ type SchedulerConf struct {
 }
 
 type ServerConf struct {
-	Host            string        `config:"host"`
-	GRPCPort        string        `config:"grpcport"`
-	HTTPPort        string        `config:"httpport"`
-	ReadTimeout     time.Duration `config:"readtimeout"`
-	WriteTimeout    time.Duration `config:"writetimeout"`
-	ShutDownTimeout time.Duration `config:"shutdowntimeout"`
+	Host             string        `config:"server_host"`
+	GRPCPort         string        `config:"server_grpc_port"`
+	HTTPPort         string        `config:"server_http_port"`
+	ReadTimeout      time.Duration `config:"server_read_timeout"`
+	WriteTimeout     time.Duration `config:"server_write_timeout"`
+	ShutDownTimeout  time.Duration `config:"server_shutdown_timeout"`
+	GracefulShutdown time.Duration `config:"server_graceful_shutdown"`
 }
 
 type DatabaseConf struct {
-	Host     string `config:"Host"`
-	Port     string `config:"port"`
-	User     string `config:"user"`
-	Password string `config:"password"`
-	DBName   string `config:"dbname"`
+	Host     string `config:"db_host"`
+	Port     string `config:"db_port"`
+	User     string `config:"db_user"`
+	Password string `config:"db_password"`
+	DBName   string `config:"db_name"`
 	// почему то со снейк кейсом не работало, оставил уж так
-	ConnectionTimeout time.Duration `config:"connectiontimeout"`
-	OperationTimeout  time.Duration `config:"operationtimeout"`
+	ConnectionTimeout time.Duration `config:"db_connection_timeout"`
+	OperationTimeout  time.Duration `config:"db_operation_timeout"`
 }
 
 type LoggerConf struct {
-	Level string `config:"level"`
+	Level string `config:"log_level"`
 }
 
 func NewConfig(ctx context.Context, configPath string) (*Config, error) {
-	loader := confita.NewLoader(file.NewBackend(configPath))
+	loader := confita.NewLoader(file.NewBackend(configPath), env.NewBackend())
 	var cfg Config
 	err := loader.Load(ctx, &cfg)
 	if err != nil {

@@ -1,0 +1,102 @@
+version: "3.8"
+services:
+  migrations:
+    build:
+      dockerfile: build/migrations/Dockerfile
+      context: .
+    depends_on:
+      - postgres
+
+  postgres:
+    image: "postgres:15.0"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - "postgres:/var/lib/postgresql/data"
+
+  rabbit:
+    image: rabbitmq:3.11.2
+    ports:
+      - "5672:5672"
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 1s
+      timeout: 3s
+      retries: 60
+    environment:
+      RABBITMQ_DEFAULT_USER: "user"
+      RABBITMQ_DEFAULT_PASS: "password"
+    volumes:
+      - "rabbit:/var/lib/rabbitmq"
+
+  calendar-api:
+    build:
+      dockerfile: build/calendar/Dockerfile
+      context: .
+    depends_on:
+      - migrations
+    environment:
+      SERVER_HOST: "0.0.0.0"
+      USE_IN_MEMORY_STORAGE: "false"
+      DB_HOST: "postgres"
+      DB_USER: "postgres"
+      DB_PASSWORD: "password"
+      LOG_LEVEL: "debug"
+      SERVER_GRACEFUL_SHUTDOWN: "3s"
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+
+  calendar-scheduler:
+    build:
+      dockerfile: build/scheduler/Dockerfile
+      context: .
+    depends_on:
+      rabbit:
+        condition: service_healthy
+      migrations:
+        condition: service_started
+    restart: "always"
+    environment:
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_USER: "postgres"
+      DB_PASSWORD: "password"
+      LOG_LEVEL: "debug"
+      USE_IN_MEMORY_STORAGE: "false"
+      RABBIT_URL: "amqp://user:password@rabbit:5672"
+      SCHEDULER_SCAN_PERIOD: 5s
+      SCHEDULER_NOTIFY_PERIOD: 5s
+      SCHEDULER_EVENTS_DEPRECATION_AGE_IN_DAYS: 180
+      SCHEDULER_EXCHANGE_TO_NOTIFY_EVENTS: "calendar_scheduler"
+
+  calendar-sender:
+    build:
+      dockerfile: build/sender/Dockerfile
+      context: .
+    depends_on:
+      rabbit:
+        condition: service_healthy
+      migrations:
+        condition: service_started
+    restart: "always"
+    environment:
+      LOG_LEVEL: "debug"
+      RABBIT_URL: "amqp://user:password@rabbit:5672"
+      SENDER_QUEUE_TO_PULL_NOTIFICATIONS: "calendar_sender"
+      DB_HOST: "postgres"
+      DB_USER: "postgres"
+      DB_PASSWORD: "password"
+      OUTPUT_FILE: /tmp/sender/out.txt
+    volumes:
+      - /tmp/sender:/tmp/sender
+
+
+volumes:
+  postgres:
+    driver: local
+  rabbit:
+    driver: local

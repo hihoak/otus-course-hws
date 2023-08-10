@@ -1,0 +1,12 @@
+### Send POST request with json body
+POST localhost:8000/event/list/for-days
+Content-Type: application/json
+
+{
+  "forDays": 1,
+  "date": {
+    "year": 2000,
+    "month": 3,
+    "day": 6
+  }
+}

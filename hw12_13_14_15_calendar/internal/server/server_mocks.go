@@ -38,10 +38,10 @@ func (m *MockApplication) EXPECT() *MockApplicationMockRecorder {
 }
 
 // CreateEvent mocks base method.
-func (m *MockApplication) CreateEvent(arg0 context.Context, arg1 *hw12_13_14_15_calendar.AddEventRequest) (*hw12_13_14_15_calendar.Empty, error) {
+func (m *MockApplication) CreateEvent(arg0 context.Context, arg1 *hw12_13_14_15_calendar.AddEventRequest) (*hw12_13_14_15_calendar.AddEventResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateEvent", arg0, arg1)
-	ret0, _ := ret[0].(*hw12_13_14_15_calendar.Empty)
+	ret0, _ := ret[0].(*hw12_13_14_15_calendar.AddEventResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -95,6 +95,21 @@ func (m *MockApplication) ListEvent(arg0 context.Context, arg1 *hw12_13_14_15_ca
 func (mr *MockApplicationMockRecorder) ListEvent(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvent", reflect.TypeOf((*MockApplication)(nil).ListEvent), arg0, arg1)
+}
+
+// ListEventForDays mocks base method.
+func (m *MockApplication) ListEventForDays(arg0 context.Context, arg1 *hw12_13_14_15_calendar.ListEventForDaysRequest) (*hw12_13_14_15_calendar.ListEventResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEventForDays", arg0, arg1)
+	ret0, _ := ret[0].(*hw12_13_14_15_calendar.ListEventResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEventForDays indicates an expected call of ListEventForDays.
+func (mr *MockApplicationMockRecorder) ListEventForDays(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventForDays", reflect.TypeOf((*MockApplication)(nil).ListEventForDays), arg0, arg1)
 }
 
 // ModifyEvent mocks base method.

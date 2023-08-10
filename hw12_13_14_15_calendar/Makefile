@@ -57,3 +57,12 @@ migrate-down:
 go-generate:
 	buf generate --path "api/event"
 	go generate ./...
+
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
+
+integration-tests:
+	docker compose -f docker-compose-test.yaml up --exit-code-from "tests" --build

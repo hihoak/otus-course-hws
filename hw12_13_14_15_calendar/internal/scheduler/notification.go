@@ -8,9 +8,9 @@ import (
 
 type Notification struct {
 	EventID        string     `json:"eventId" db:"event_id"`
-	EventTitle     string     `db:"event_title"`
-	EventStartDate *time.Time `db:"event_start_date"`
-	SendToUserID   string     `db:"send_to_user_id"`
+	EventTitle     string     `json:"eventTitle" db:"event_title"`
+	EventStartDate *time.Time `json:"eventStartDate" db:"event_start_date"`
+	SendToUserID   string     `json:"sendToUserId" db:"send_to_user_id"`
 }
 
 func fromEventsToNotifications(events []*storage.Event) []*Notification {

@@ -131,17 +131,18 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AddEvent mocks base method.
-func (m *MockStorage) AddEvent(ctx context.Context, title string, NotifyDate, timeNow time.Time) error {
+func (m *MockStorage) AddEvent(ctx context.Context, event *storage.Event) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddEvent", ctx, title, NotifyDate, timeNow)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "AddEvent", ctx, event)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddEvent indicates an expected call of AddEvent.
-func (mr *MockStorageMockRecorder) AddEvent(ctx, title, NotifyDate, timeNow interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) AddEvent(ctx, event interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, title, NotifyDate, timeNow)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockStorage)(nil).AddEvent), ctx, event)
 }
 
 // Close mocks base method.
@@ -214,6 +215,21 @@ func (m *MockStorage) ListEvents(ctx context.Context) ([]*storage.Event, error) 
 func (mr *MockStorageMockRecorder) ListEvents(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockStorage)(nil).ListEvents), ctx)
+}
+
+// ListEventsForDays mocks base method.
+func (m *MockStorage) ListEventsForDays(ctx context.Context, date *time.Time, forDays int64) ([]*storage.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEventsForDays", ctx, date, forDays)
+	ret0, _ := ret[0].([]*storage.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEventsForDays indicates an expected call of ListEventsForDays.
+func (mr *MockStorageMockRecorder) ListEventsForDays(ctx, date, forDays interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsForDays", reflect.TypeOf((*MockStorage)(nil).ListEventsForDays), ctx, date, forDays)
 }
 
 // ModifyEvent mocks base method.
