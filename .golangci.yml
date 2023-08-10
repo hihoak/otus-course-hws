@@ -3,6 +3,7 @@ run:
   build-tags:
     - bench
     - !bench
+    - ubuntu
 
 linters-settings:
   funlen:

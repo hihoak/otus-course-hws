@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  exporter:
+    image: "docker.io/soundsofanarchy/exporter:arm64-latest"
+    environment:
+      EXPORTER_LOGGER_LOG_LEVEL: "debug"
+      EXPORTER_SERVER_ADDRESS: "0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - /tmp/sys-exporter:/tmp/sys-exporter
+
+  exporter-client:
+    image: "docker.io/soundsofanarchy/exporter-client:arm64-latest"
+    ports:
+      - "7000:7000"
+    environment:
+      EXPORTER_SERVER_ADDRESS: "exporter:8000"
+    depends_on:
+      - exporter

@@ -1,0 +1,81 @@
+name: Exporter CI/CD
+
+on:
+  push:
+    branches:
+      - final_project*
+
+env:
+  GO111MODULE: "on"
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.ref, 'final_project') }}
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ~1.17
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Linters
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.41.1
+          working-directory: sys-exporter
+
+  tests:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.ref, 'final_project') }}
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ~1.17
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: go tests
+        run: go test -tags "ubuntu" -v -count=100 -race -timeout=1m ./...
+        working-directory: sys-exporter
+
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.ref, 'final_project') }}
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ~1.17
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: go build
+        run: make build-all
+        working-directory: sys-exporter
+
+      - name: Archive binary as amd64-ubuntu artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exporter-binary-amd64-ubuntu
+          path: sys-exporter/bin/exporter/exporter_amd64_ubuntu
+          if-no-files-found: error
+
+      - name: Archive binary as arm64-macos artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exporter-binary-arm64-macos
+          path: sys-exporter/bin/exporter/exporter_arm64_macos
+          if-no-files-found: error
+
+      - name: Archive binary as amd64-windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exporter-binary-amd64-windows
+          path: sys-exporter/bin/exporter/exporter_amd64_windows.exe
+          if-no-files-found: error

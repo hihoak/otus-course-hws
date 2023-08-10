@@ -1,0 +1,13 @@
+FROM ubuntu:18.04
+
+WORKDIR /app
+
+ARG PATH_TO_BIN
+ENV path=${PATH_TO_BIN}
+
+COPY ${PATH_TO_BIN} /app/${PATH_TO_BIN}
+
+EXPOSE 8000/tcp
+EXPOSE 7000/tcp
+
+CMD ./${path}

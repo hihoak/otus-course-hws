@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package sys_exporter;
+option go_package = "github.com/hihoak/otus-course-hws/sys-exporter";
+
+import "api/google/api/annotations.proto";
+
+service ExporterService {
+  rpc SendStreamSnapshots(SendStreamSnapshotsRequest) returns (stream SendStreamSnapshotsResponse) {
+    option (google.api.http) = {
+      post: "/snapshots/send-stream"
+      body: "*"
+    };
+  }
+}
+
+message SendStreamSnapshotsRequest {}
+
+message SendStreamSnapshotsResponse {
+  Snapshot snapshot = 1;
+}
+
+message Snapshot {
+  int64 timestamp = 1;
+  LoadAverage loadAverage = 2;
+  CpuUsage    cpuUsage = 3;
+  DiskUsage   diskUsage = 4;
+  NetworkTopTalkers networkTopTalkers = 5;
+  FileSystemInfo    fileSystemInfo = 6;
+
+  message LoadAverage {
+    float for1min = 1;
+    float for5min = 2;
+    float for15min = 3;
+    float cpu_usage_win = 4;
+  }
+
+  message CpuUsage {
+    float user = 1;
+    float sys = 2;
+    float idle = 3;
+  }
+
+  message DiskUsage {
+    float kbPerTransfer = 1;
+    float mbPerSecond = 2;
+    int64 transfersPerSecond = 3;
+  }
+
+  message NetworkTopTalkers {
+    repeated NetworkTalker byBytesIn = 1;
+    repeated NetworkTalker byBytesOut = 2;
+
+    message NetworkTalker {
+      string name = 1;
+      int64  pid = 2;
+      int64  bytesIn = 3;
+      int64  bytesOut = 4;
+    }
+  }
+
+  message FileSystemInfo {
+    repeated FileSystem fileSystem = 1;
+
+    message FileSystem {
+      string fileSystem = 1;
+      FileSystemMemoryInfo memoryInfo = 2;
+      FileSystemInodeInfo inodeInfo = 3;
+      string mountedOn = 4;
+
+      message FileSystemMemoryInfo {
+        int64 sizeBytes = 1;
+        int64 usedBytes = 2;
+        int64 availableBytes = 3;
+        float capacityPercent = 4;
+      }
+
+      message FileSystemInodeInfo {
+        int64 inodeUsed = 1;
+        int64 inodeFree = 2;
+        float inodeUsedPercent = 3;
+      }
+    }
+  }
+}
