@@ -1,7 +1,8 @@
-package main
+package client
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"net"
 	"sync"
@@ -61,5 +62,51 @@ func TestTelnetClient(t *testing.T) {
 		}()
 
 		wg.Wait()
+	})
+}
+
+func TestAdditionalTelnetClient(t *testing.T) {
+	t.Run("failed to connect to address", func(t *testing.T) {
+		in := &bytes.Buffer{}
+		out := &bytes.Buffer{}
+
+		timeout, err := time.ParseDuration("1s")
+		require.NoError(t, err)
+
+		client := NewTelnetClient("ithinkitisnotexistforsure1322133.my.site.tests", timeout, io.NopCloser(in), out)
+		err = client.Connect()
+		require.ErrorIs(t, err, ErrorEstablishConnection{})
+	})
+
+	t.Run("close", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		defer func() { require.NoError(t, l.Close()) }()
+
+		in := &bytes.Buffer{}
+		out := &bytes.Buffer{}
+
+		timeout, err := time.ParseDuration("10s")
+		require.NoError(t, err)
+
+		client := NewTelnetClient(l.Addr().String(), timeout, ioutil.NopCloser(in), out)
+		require.NoError(t, client.Connect())
+		receiverErrors := make(chan error)
+		go func() {
+			defer close(receiverErrors)
+			receiverErrors <- client.Receive()
+		}()
+		senderErrors := make(chan error)
+		go func() {
+			defer close(senderErrors)
+			senderErrors <- client.Send()
+		}()
+		require.NoError(t, client.Close())
+		err, ok := <-receiverErrors
+		require.NoError(t, err)
+		require.True(t, ok)
+		err, ok = <-senderErrors
+		require.NoError(t, err)
+		require.True(t, ok)
 	})
 }
